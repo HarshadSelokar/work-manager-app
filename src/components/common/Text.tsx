@@ -1,13 +1,21 @@
 import React from 'react';
-import { Text as RNText, TextProps as RNTextProps, TextStyle } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, TextStyle, StyleProp } from 'react-native';
 import { theme } from '@theme/index';
 
+type TypographyVariant =
+  | 'displayLarge' | 'displaySmall'
+  | 'titleLarge' | 'titleMedium'
+  | 'bodyLarge' | 'bodyMedium' | 'bodySmall'
+  | 'caption' | 'overline'
+  // Legacy aliases
+  | 'h1' | 'h2' | 'h3';
+
 interface TextProps extends RNTextProps {
-  variant?: 'h1' | 'h2' | 'h3' | 'bodyLarge' | 'bodyMedium' | 'bodySmall' | 'caption';
+  variant?: TypographyVariant;
   color?: keyof typeof theme.colors;
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
   fontWeight?: 'bold' | 'semiBold' | 'medium' | 'regular' | 'light';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
 }
 
 export const Text: React.FC<TextProps> = ({

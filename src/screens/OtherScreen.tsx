@@ -5,10 +5,10 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MainTabParamList, RootStackParamList } from '@navigation/types';
-import { AppContainer, Text, EmptyState, SectionHeader, LoadingView } from '@components/common';
+import { AppContainer, Text, EmptyState, SectionHeader, LoadingView, FABMenu } from '@components/common';
 import { WorkCard } from '@components/work/WorkCard';
 import { WorksRepository } from '../repository/works.repository';
-import { Work, WorkPriority, WorkCategory } from '@models/index';
+import { Work, WorkPriority, WorkCategory, WorkStatus } from '@models/index';
 import { theme } from '@theme/index';
 
 type Props = CompositeScreenProps<
@@ -25,46 +25,81 @@ const priorityWeights: Record<WorkPriority, number> = {
 export const OtherScreen: React.FC<Props> = ({ navigation }) => {
   const [works, setWorks] = useState<Work[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const worksRepo = useMemo(() => new WorksRepository(), []);
+
+  const fetchTasks = useCallback(() => {
+    try {
+      const data = worksRepo.findByCategory(WorkCategory.OTHER);
+      setWorks(data);
+    } catch (error) {
+      console.error('Failed to load other tasks:', error);
+    }
+  }, [worksRepo]);
 
   // Fetch 'other' tasks whenever screen gets focused
   useFocusEffect(
     useCallback(() => {
       setIsLoading(true);
-      try {
-        const data = worksRepo.findByCategory(WorkCategory.OTHER);
-        setWorks(data);
-      } catch (error) {
-        console.error('Failed to load other tasks:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }, [worksRepo])
+      fetchTasks();
+      setIsLoading(false);
+    }, [fetchTasks])
   );
 
-  // Group and sort works into Upcoming, Future, and No Deadline sections
-  const sections = useMemo(() => {
-    const upcomingList: Work[] = [];
-    const futureList: Work[] = [];
-    const noDeadlineList: Work[] = [];
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchTasks();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 400);
+  }, [fetchTasks]);
 
+  // Group and sort works into Overdue, Tomorrow, This Week, Later, and No Deadline sections
+  const sections = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const sevenDaysLater = new Date(today.getTime() + 86400000 * 7);
 
-    for (const work of works) {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const sevenDaysLater = new Date(today);
+    sevenDaysLater.setDate(today.getDate() + 7);
+
+    const overdueList: Work[] = [];
+    const tomorrowList: Work[] = [];
+    const thisWeekList: Work[] = [];
+    const laterList: Work[] = [];
+    const noDeadlineList: Work[] = [];
+
+    works.forEach(work => {
+      // Filter out completed tasks as they belong in Completed tab
+      if (work.status === WorkStatus.COMPLETED) {
+        return;
+      }
+
       if (!work.deadline) {
         noDeadlineList.push(work);
-      } else {
-        const dueDate = new Date(work.deadline);
-        dueDate.setHours(0, 0, 0, 0);
-        if (dueDate.getTime() <= sevenDaysLater.getTime()) {
-          upcomingList.push(work);
-        } else {
-          futureList.push(work);
-        }
+        return;
       }
-    }
+
+      const dueDate = new Date(work.deadline);
+      dueDate.setHours(0, 0, 0, 0);
+
+      const dueTime = dueDate.getTime();
+      const todayTime = today.getTime();
+      const tomorrowTime = tomorrow.getTime();
+      const weekTime = sevenDaysLater.getTime();
+
+      if (dueTime < todayTime) {
+        overdueList.push(work);
+      } else if (dueTime === tomorrowTime) {
+        tomorrowList.push(work);
+      } else if (dueTime > tomorrowTime && dueTime <= weekTime) {
+        thisWeekList.push(work);
+      } else {
+        laterList.push(work);
+      }
+    });
 
     const sortComparator = (a: Work, b: Work) => {
       const aTime = a.deadline ? a.deadline.getTime() : 0;
@@ -76,8 +111,10 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
       return priorityWeights[b.priority] - priorityWeights[a.priority];
     };
 
-    upcomingList.sort(sortComparator);
-    futureList.sort(sortComparator);
+    overdueList.sort(sortComparator);
+    tomorrowList.sort(sortComparator);
+    thisWeekList.sort(sortComparator);
+    laterList.sort(sortComparator);
 
     noDeadlineList.sort((a, b) => {
       const priorityDiff = priorityWeights[b.priority] - priorityWeights[a.priority];
@@ -88,14 +125,40 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
     });
 
     const result = [];
-    if (upcomingList.length > 0) {
-      result.push({ title: 'Upcoming Tasks', data: upcomingList });
+    if (overdueList.length > 0) {
+      result.push({
+        title: 'Overdue Tasks',
+        accentColor: theme.colors.priorityHigh,
+        data: overdueList,
+      });
     }
-    if (futureList.length > 0) {
-      result.push({ title: 'Future Tasks', data: futureList });
+    if (tomorrowList.length > 0) {
+      result.push({
+        title: 'Tomorrow',
+        accentColor: theme.colors.priorityMedium,
+        data: tomorrowList,
+      });
+    }
+    if (thisWeekList.length > 0) {
+      result.push({
+        title: 'This Week',
+        accentColor: theme.colors.primary,
+        data: thisWeekList,
+      });
+    }
+    if (laterList.length > 0) {
+      result.push({
+        title: 'Later',
+        accentColor: theme.colors.secondary,
+        data: laterList,
+      });
     }
     if (noDeadlineList.length > 0) {
-      result.push({ title: 'No Deadline Set', data: noDeadlineList });
+      result.push({
+        title: 'No Deadline Set',
+        accentColor: theme.colors.textSecondary,
+        data: noDeadlineList,
+      });
     }
     return result;
   }, [works]);
@@ -113,20 +176,40 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const renderSectionHeader = useCallback(
-    ({ section: { title } }: { section: { title: string } }) => <SectionHeader title={title} />,
+    ({ section: { title, accentColor, data } }: { section: { title: string; accentColor?: string; data: Work[] } }) => (
+      <SectionHeader title={title} count={data.length} accentColor={accentColor} />
+    ),
     []
   );
 
   const keyExtractor = useCallback((item: Work) => item.id, []);
 
+  const fabOptions = useMemo(() => [
+    {
+      label: 'Add Work',
+      icon: '➕',
+      onPress: () => navigation.navigate('AddWork'),
+    },
+    {
+      label: 'Quick Note',
+      icon: '✏️',
+      onPress: () => navigation.navigate('AddNote'),
+    },
+    {
+      label: 'Search',
+      icon: '🔍',
+      onPress: () => navigation.navigate('Search'),
+    },
+  ], [navigation]);
+
   return (
-    <AppContainer style={styles.container}>
+    <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
       <View style={styles.header}>
-        <Text variant="h1" color="primary">
-          Backlog & Routine
+        <Text variant="displaySmall" fontWeight="bold">
+          Upcoming Planner
         </Text>
         <Text variant="bodyMedium" color="textSecondary">
-          Monitor future milestones and manage tasks with fluid deadlines.
+          Monitor your backlog milestones and plan future works.
         </Text>
       </View>
 
@@ -140,27 +223,42 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled={false}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <EmptyState
+              emoji="📅"
               title="No upcoming works!"
-              description="Your backlog is empty. Tap Add Work to queue up future routine tasks."
+              description="Your backlog planner is empty. Tap Add Work to schedule future items."
+              actionLabel="Add Work"
+              onAction={() => navigation.navigate('AddWork')}
+              style={styles.emptyState}
             />
           }
         />
       )}
+
+      {/* Global FAB Menu */}
+      <FABMenu options={fabOptions} />
     </AppContainer>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.background,
   },
   header: {
+    paddingHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   listContent: {
-    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: 90, // Leave space for FAB
+  },
+  emptyState: {
+    marginTop: theme.spacing.xl,
   },
 });

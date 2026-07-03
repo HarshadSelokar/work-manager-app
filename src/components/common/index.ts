@@ -6,3 +6,8 @@ export * from './EmptyState';
 export * from './DeadlineChip';
 export * from './LoadingView';
 export * from './SectionHeader';
+export * from './StatChip';
+export * from './Divider';
+export * from './MetadataRow';
+export * from './SearchBar';
+export * from './FABMenu';

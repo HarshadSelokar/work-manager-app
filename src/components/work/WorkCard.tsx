@@ -1,76 +1,65 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Work, WorkStatus } from '@models/work.model';
+import { Work } from '@models/work.model';
 import { theme } from '@theme/index';
-import { Text, PriorityBadge, DeadlineChip } from '@components/common';
+import { Text, PriorityBadge, DeadlineChip, MetadataRow } from '@components/common';
 
 interface WorkCardProps {
   work: Work;
   onPress: (id: string) => void;
 }
 
-export const WorkCard: React.FC<WorkCardProps> = React.memo(({ work, onPress }) => {
-  const getStatusColor = (): keyof typeof theme.colors => {
-    switch (work.status) {
-      case WorkStatus.COMPLETED:
-        return 'success';
-      case WorkStatus.IN_PROGRESS:
-        return 'info';
-      case WorkStatus.TODO:
-      default:
-        return 'textSecondary';
-    }
-  };
+const PRIORITY_STRIP_COLORS = {
+  low: theme.colors.priorityLow,
+  medium: theme.colors.priorityMedium,
+  high: theme.colors.priorityHigh,
+};
 
+export const WorkCard: React.FC<WorkCardProps> = React.memo(({ work, onPress }) => {
   const handlePress = () => {
     onPress(work.id);
   };
 
+  const stripColor = PRIORITY_STRIP_COLORS[work.priority] || theme.colors.border;
+
+  // Build metadata items
+  const metaItems = [];
+  if (work.images && work.images.length > 0) {
+    metaItems.push({ icon: '📷', value: work.images.length });
+  }
+  if (work.links && work.links.length > 0) {
+    metaItems.push({ icon: '🔗', value: work.links.length });
+  }
+
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={handlePress} style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.titleCol}>
-          <Text variant="bodyLarge" fontWeight="bold" style={styles.title} numberOfLines={1}>
-            {work.title}
-          </Text>
-          {work.reference ? (
-            <Text variant="caption" color="textSecondary" style={styles.refText}>
-              #{work.reference}
+      {/* Priority Color Left Indicator Strip */}
+      <View style={[styles.priorityStrip, { backgroundColor: stripColor }]} />
+
+      <View style={styles.contentContainer}>
+        <View style={styles.header}>
+          <View style={styles.titleCol}>
+            <Text variant="titleMedium" fontWeight="bold" style={styles.title} numberOfLines={1}>
+              {work.title}
             </Text>
-          ) : null}
+            {work.reference ? (
+              <Text variant="caption" color="textSecondary" style={styles.refText}>
+                #{work.reference}
+              </Text>
+            ) : null}
+          </View>
+          <PriorityBadge priority={work.priority} />
         </View>
-        <PriorityBadge priority={work.priority} />
-      </View>
 
-      {work.description ? (
-        <Text
-          variant="bodyMedium"
-          color="textSecondary"
-          style={styles.description}
-          numberOfLines={2}
-        >
-          {work.description}
-        </Text>
-      ) : null}
-
-      {work.deadline ? (
-        <View style={styles.metaRow}>
-          <DeadlineChip deadline={work.deadline} />
-        </View>
-      ) : null}
-
-      <View style={styles.footer}>
-        <View style={styles.statusRow}>
-          <View
-            style={[styles.statusDot, { backgroundColor: theme.colors[getStatusColor()] }]}
-          />
-          <Text variant="bodySmall" color={getStatusColor()} fontWeight="medium">
-            {work.status.replace('_', ' ').toUpperCase()}
-          </Text>
-        </View>
-        <Text variant="caption" color="textTertiary">
-          {work.createdAt.toLocaleDateString()}
-        </Text>
+        {/* Dynamic Metadata / Deadline Footer */}
+        {(work.deadline || metaItems.length > 0) && (
+          <View style={styles.metaRow}>
+            {work.deadline ? (
+              <DeadlineChip deadline={work.deadline} />
+            ) : null}
+            <MetadataRow items={metaItems} style={styles.attachments} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -80,50 +69,45 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.card,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
     ...theme.elevation.sm,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  priorityStrip: {
+    width: 5,
+    height: '100%',
+  },
+  contentContainer: {
+    flex: 1,
+    padding: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   titleCol: {
     flex: 1,
     marginRight: theme.spacing.sm,
   },
   title: {
-    marginBottom: 2,
+    color: theme.colors.textPrimary,
   },
   refText: {
     fontStyle: 'italic',
-  },
-  description: {
-    marginBottom: theme.spacing.md,
-    lineHeight: 20,
+    marginTop: 1,
   },
   metaRow: {
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     flexDirection: 'row',
-  },
-  footer: {
-    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.sm,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: theme.spacing.xs,
+  attachments: {
+    marginLeft: 'auto',
   },
 });

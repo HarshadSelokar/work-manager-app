@@ -7,6 +7,7 @@ import { WorkDetailsScreen } from '@screens/WorkDetailsScreen';
 import { EditWorkScreen } from '@screens/EditWorkScreen';
 import { AddNoteScreen } from '@screens/AddNoteScreen';
 import { NoteDetailsScreen } from '@screens/NoteDetailsScreen';
+import { SearchScreen } from '@screens/SearchScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -42,6 +43,11 @@ export const RootNavigator: React.FC = () => {
         name="NoteDetails"
         component={NoteDetailsScreen}
         options={{ title: 'Note Details' }}
+      />
+      <Stack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ title: 'Global Search' }}
       />
     </Stack.Navigator>
   );

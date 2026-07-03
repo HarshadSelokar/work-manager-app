@@ -70,12 +70,16 @@ export class NotesRepository {
    * Queries list of all domain notes.
    */
   findAll(): Note[] {
-    const res = this.db.execute('SELECT * FROM notes ORDER BY created_at DESC;');
+    const res = this.db.execute(
+      'SELECT *, (SELECT COUNT(*) FROM note_images WHERE note_id = notes.id) as image_count FROM notes ORDER BY created_at DESC;'
+    );
     const list: Note[] = [];
     if (res.rows) {
       for (let i = 0; i < res.rows.length; i++) {
         const row = res.rows.item(i);
-        list.push(mapNoteRowToDomain(row));
+        const mapped = mapNoteRowToDomain(row);
+        mapped.imageCount = row.image_count;
+        list.push(mapped);
       }
     }
     return list;
@@ -113,6 +117,31 @@ export class NotesRepository {
       console.error('Failed to update note in repository, rolled back:', error);
       throw error;
     }
+  }
+
+  /**
+   * Performs search query filtering notes by title or content.
+   */
+  search(queryText: string): Note[] {
+    const cleanQuery = queryText.trim();
+    if (!cleanQuery) {
+      return this.findAll();
+    }
+
+    const res = this.db.execute(
+      'SELECT *, (SELECT COUNT(*) FROM note_images WHERE note_id = notes.id) as image_count FROM notes WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC;',
+      [`%${cleanQuery}%`, `%${cleanQuery}%`]
+    );
+    const list: Note[] = [];
+    if (res.rows) {
+      for (let i = 0; i < res.rows.length; i++) {
+        const row = res.rows.item(i);
+        const mapped = mapNoteRowToDomain(row);
+        mapped.imageCount = row.image_count;
+        list.push(mapped);
+      }
+    }
+    return list;
   }
 
   /**

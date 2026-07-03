@@ -17,4 +17,5 @@ export type RootStackParamList = {
   EditWork: { workId: string };
   AddNote: undefined;
   NoteDetails: { noteId: string };
+  Search: undefined;
 };

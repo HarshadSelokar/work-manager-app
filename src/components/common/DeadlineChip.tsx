@@ -23,25 +23,25 @@ export const DeadlineChip: React.FC<DeadlineChipProps> = React.memo(({ deadline 
 
     if (diffDays < 0) {
       return {
-        backgroundColor: theme.colors.danger + '15',
-        textColor: 'danger' as const,
+        backgroundColor: theme.colors.priorityHighBg,
+        textColor: 'priorityHigh' as const,
         label: 'Overdue',
       };
     } else if (diffDays === 0) {
       return {
-        backgroundColor: theme.colors.warning + '15',
-        textColor: 'warning' as const,
+        backgroundColor: theme.colors.priorityMediumBg,
+        textColor: 'priorityMedium' as const,
         label: 'Due Today',
       };
     } else if (diffDays === 1) {
       return {
-        backgroundColor: theme.colors.warning + '10',
-        textColor: 'warning' as const,
+        backgroundColor: theme.colors.priorityMediumBg,
+        textColor: 'priorityMedium' as const,
         label: 'Due Tomorrow',
       };
     } else {
       return {
-        backgroundColor: theme.colors.border,
+        backgroundColor: theme.colors.divider,
         textColor: 'textSecondary' as const,
         label: `Due ${dueDate.toLocaleDateString()}`,
       };
@@ -62,8 +62,8 @@ export const DeadlineChip: React.FC<DeadlineChipProps> = React.memo(({ deadline 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radius.xs,
+    paddingVertical: 2,
+    borderRadius: theme.radius.round,
     alignSelf: 'flex-start',
   },
 });

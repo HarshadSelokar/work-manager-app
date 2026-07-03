@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@navigation/types';
-import { AppContainer, Text, Button } from '@components/common';
+import { AppContainer, Text, Button, Divider } from '@components/common';
 import { WorksRepository } from '../repository/works.repository';
 import { Work, WorkStatus, WorkCategory, WorkPriority } from '@models/index';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -35,7 +35,7 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkTitle, setNewLinkTitle] = useState('');
 
-  // 1. Image Upload Actions
+  // Image Upload Actions
   const handleSelectImage = useCallback((source: 'camera' | 'gallery') => {
     const options = {
       mediaType: 'photo' as const,
@@ -74,7 +74,7 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
     setImages(prev => prev.filter(img => img.id !== id));
   }, []);
 
-  // 2. Link Management Actions
+  // Link Management Actions
   const handleAddLink = useCallback(() => {
     if (!newLinkUrl.trim()) {
       Alert.alert('Validation', 'Link URL is required.');
@@ -95,7 +95,7 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
     setLinks(prev => prev.filter(link => link.id !== id));
   }, []);
 
-  // 3. Save Action
+  // Save Action
   const handleSave = useCallback(() => {
     if (!title.trim()) {
       Alert.alert('Validation', 'Task title is required.');
@@ -167,15 +167,20 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
   }, [title, reference, priority, category, description, deadlineString, images, links, worksRepo, navigation]);
 
   return (
-    <AppContainer>
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <Text variant="h1" color="primary" style={styles.header}>
-          New Task Details
-        </Text>
+    <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text variant="displaySmall" fontWeight="bold">
+            Create Routine Task
+          </Text>
+          <Text variant="bodyMedium" color="textSecondary">
+            Fill in details to catalog a new work item.
+          </Text>
+        </View>
 
         {/* Title Input */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
+          <Text variant="overline" color="textSecondary" style={styles.label}>
             Title *
           </Text>
           <TextInput
@@ -189,8 +194,8 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Reference Input */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
-            Reference Code (Unique)
+          <Text variant="overline" color="textSecondary" style={styles.label}>
+            Reference Code (Unique identifier)
           </Text>
           <TextInput
             style={styles.textInput}
@@ -202,72 +207,89 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        {/* Category Segmented Selector */}
+        {/* Category Selector */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
-            Category
+          <Text variant="overline" color="textSecondary" style={styles.label}>
+            Category Target
           </Text>
-          <View style={styles.selectorRow}>
+          <View style={styles.selectorContainer}>
             <TouchableOpacity
+              activeOpacity={0.8}
               style={[
-                styles.selectorButton,
-                category === WorkCategory.TODAY && styles.selectorActive,
+                styles.selectorTab,
+                category === WorkCategory.TODAY && styles.selectorTabActive,
               ]}
               onPress={() => setCategory(WorkCategory.TODAY)}
             >
               <Text
                 fontWeight="semiBold"
-                color={category === WorkCategory.TODAY ? 'primary' : 'textSecondary'}
+                style={[
+                  styles.selectorText,
+                  category === WorkCategory.TODAY && styles.selectorTextActive,
+                ]}
               >
-                Today
+                Today's Routine
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
+              activeOpacity={0.8}
               style={[
-                styles.selectorButton,
-                category === WorkCategory.OTHER && styles.selectorActive,
+                styles.selectorTab,
+                category === WorkCategory.OTHER && styles.selectorTabActive,
               ]}
               onPress={() => setCategory(WorkCategory.OTHER)}
             >
               <Text
                 fontWeight="semiBold"
-                color={category === WorkCategory.OTHER ? 'primary' : 'textSecondary'}
+                style={[
+                  styles.selectorText,
+                  category === WorkCategory.OTHER && styles.selectorTextActive,
+                ]}
               >
-                Other (Backlog)
+                Upcoming Backlog
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Priority Segmented Selector */}
+        {/* Priority Segmented Chips Selector */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
-            Priority
+          <Text variant="overline" color="textSecondary" style={styles.label}>
+            Priority Status
           </Text>
-          <View style={styles.selectorRow}>
-            {Object.values(WorkPriority).map(p => (
-              <TouchableOpacity
-                key={p}
-                style={[
-                  styles.selectorButton,
-                  priority === p && styles.selectorActive,
-                ]}
-                onPress={() => setPriority(p)}
-              >
-                <Text
-                  fontWeight="semiBold"
-                  color={priority === p ? 'primary' : 'textSecondary'}
+          <View style={styles.priorityContainer}>
+            {[
+              { value: WorkPriority.LOW, color: theme.colors.priorityLow, bg: theme.colors.priorityLowBg, label: 'Low' },
+              { value: WorkPriority.MEDIUM, color: theme.colors.priorityMedium, bg: theme.colors.priorityMediumBg, label: 'Medium' },
+              { value: WorkPriority.HIGH, color: theme.colors.priorityHigh, bg: theme.colors.priorityHighBg, label: 'High' }
+            ].map(item => {
+              const isSelected = priority === item.value;
+              return (
+                <TouchableOpacity
+                  key={item.value}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.priorityChip,
+                    { borderColor: isSelected ? item.color : theme.colors.border },
+                    isSelected && { backgroundColor: item.bg }
+                  ]}
+                  onPress={() => setPriority(item.value)}
                 >
-                  {p.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    fontWeight="semiBold"
+                    style={{ color: isSelected ? item.color : theme.colors.textSecondary }}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Description Input */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
+          <Text variant="overline" color="textSecondary" style={styles.label}>
             Description
           </Text>
           <TextInput
@@ -283,7 +305,7 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Deadline Input */}
         <View style={styles.inputGroup}>
-          <Text variant="bodyMedium" fontWeight="semiBold" style={styles.label}>
+          <Text variant="overline" color="textSecondary" style={styles.label}>
             Deadline (YYYY-MM-DD)
           </Text>
           <TextInput
@@ -295,16 +317,17 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
+        <Divider style={styles.sectionDivider} />
+
         {/* Link Management */}
-        <View style={styles.sectionDivider} />
-        <Text variant="h3" color="primary" style={styles.sectionHeader}>
+        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>
           Links & Bookmarks
         </Text>
 
         <View style={styles.linkForm}>
           <TextInput
             style={[styles.textInput, styles.linkInput]}
-            placeholder="Link Title (e.g. Documentation)"
+            placeholder="Link Title (e.g. Reference Specs)"
             placeholderTextColor={theme.colors.textTertiary}
             value={newLinkTitle}
             onChangeText={setNewLinkTitle}
@@ -321,12 +344,12 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           <Button title="Add Bookmark Link" variant="secondary" onPress={handleAddLink} />
         </View>
 
-        {links.length > 0 ? (
+        {links.length > 0 && (
           <View style={styles.attachmentContainer}>
             {links.map(l => (
               <View key={l.id} style={styles.linkBadge}>
                 <View style={styles.linkTextWrapper}>
-                  <Text variant="bodyMedium" fontWeight="medium" numberOfLines={1}>
+                  <Text variant="bodyLarge" fontWeight="medium" numberOfLines={1}>
                     {l.title}
                   </Text>
                   <Text variant="caption" color="textSecondary" numberOfLines={1}>
@@ -334,42 +357,29 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveLink(l.id)}>
-                  <Text color="danger" fontWeight="bold" style={styles.removeText}>
+                  <Text variant="bodyMedium" fontWeight="bold" style={{ color: theme.colors.priorityHigh }}>
                     Remove
                   </Text>
                 </TouchableOpacity>
               </View>
             ))}
           </View>
-        ) : null}
+        )}
+
+        <Divider style={styles.sectionDivider} />
 
         {/* Image Attachments */}
-        <View style={styles.sectionDivider} />
-        <Text variant="h3" color="primary" style={styles.sectionHeader}>
+        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>
           Image Attachments
         </Text>
 
         <View style={styles.imageSelectorRow}>
-          <TouchableOpacity
-            style={styles.imageActionButton}
-            onPress={() => handleSelectImage('camera')}
-          >
-            <Text color="primary" fontWeight="bold">
-              📷 Use Camera
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.imageActionButton}
-            onPress={() => handleSelectImage('gallery')}
-          >
-            <Text color="primary" fontWeight="bold">
-              🖼 Open Gallery
-            </Text>
-          </TouchableOpacity>
+          <Button title="📸  Use Camera" variant="secondary" onPress={() => handleSelectImage('camera')} style={{ flex: 1 }} />
+          <Button title="🖼️  Open Gallery" variant="secondary" onPress={() => handleSelectImage('gallery')} style={{ flex: 1 }} />
         </View>
 
-        {images.length > 0 ? (
-          <ScrollView horizontal style={styles.imageList} contentContainerStyle={styles.imageContent}>
+        {images.length > 0 && (
+          <ScrollView horizontal style={styles.imageList} contentContainerStyle={styles.imageContent} showsHorizontalScrollIndicator={false}>
             {images.map(img => (
               <View key={img.id} style={styles.imageWrapper}>
                 <Image source={{ uri: img.imagePath }} style={styles.previewImage} />
@@ -384,10 +394,11 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             ))}
           </ScrollView>
-        ) : null}
+        )}
+
+        <Divider style={styles.sectionDivider} />
 
         {/* Screen Bottom Actions */}
-        <View style={styles.sectionDivider} />
         <View style={styles.actionRow}>
           <Button title="Save Task" variant="primary" onPress={handleSave} style={styles.actionBtn} />
           <Button
@@ -403,8 +414,12 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: theme.colors.background,
+  },
   scrollContainer: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
   },
   header: {
@@ -415,41 +430,61 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: theme.spacing.xs,
+    color: theme.colors.textSecondary,
   },
   textInput: {
     backgroundColor: theme.colors.card,
     borderColor: theme.colors.border,
     borderWidth: 1,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     color: theme.colors.textPrimary,
     fontSize: 15,
+    ...theme.elevation.xs,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
-  selectorRow: {
+  selectorContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.sm,
-    overflow: 'hidden',
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: 3,
   },
-  selectorButton: {
+  selectorTab: {
     flex: 1,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm - 2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: theme.radius.sm,
   },
-  selectorActive: {
-    backgroundColor: theme.colors.border,
+  selectorTabActive: {
+    backgroundColor: theme.colors.card,
+    ...theme.elevation.xs,
+  },
+  selectorText: {
+    color: theme.colors.textSecondary,
+  },
+  selectorTextActive: {
+    color: theme.colors.primary,
+  },
+  priorityContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  priorityChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 2,
+    backgroundColor: theme.colors.card,
+    ...theme.elevation.xs,
   },
   sectionDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
     marginVertical: theme.spacing.lg,
   },
   sectionHeader: {
@@ -459,17 +494,21 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card,
     borderColor: theme.colors.border,
     borderWidth: 1,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
+    ...theme.elevation.xs,
   },
   linkInput: {
     marginBottom: theme.spacing.sm,
   },
   attachmentContainer: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.elevation.xs,
   },
   linkBadge: {
     flexDirection: 'row',
@@ -477,29 +516,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.divider,
   },
   linkTextWrapper: {
     flex: 1,
     marginRight: theme.spacing.sm,
   },
-  removeText: {
-    paddingHorizontal: theme.spacing.xs,
-  },
   imageSelectorRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
-  },
-  imageActionButton: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.primary,
-    borderWidth: 1.5,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   imageList: {
     marginVertical: theme.spacing.sm,
@@ -513,7 +539,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: 90,
     height: 90,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.border,
   },
   deleteImageBadge: {

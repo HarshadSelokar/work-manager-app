@@ -11,4 +11,5 @@ export interface Note {
   createdAt: Date; // Maps to Unix timestamps in database
   updatedAt: Date;
   images: NoteImage[];
+  imageCount?: number;
 }

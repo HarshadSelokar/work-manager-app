@@ -113,6 +113,24 @@ export class WorksRepository {
   }
 
   /**
+   * Queries list of all completed tasks.
+   * Sorted by completion date (updated_at DESC).
+   */
+  findCompleted(): Work[] {
+    const res = this.db.execute(
+      'SELECT * FROM works WHERE status = \'completed\' ORDER BY updated_at DESC;'
+    );
+    const list: Work[] = [];
+    if (res.rows) {
+      for (let i = 0; i < res.rows.length; i++) {
+        const row = res.rows.item(i);
+        list.push(mapWorkRowToDomain(row));
+      }
+    }
+    return list;
+  }
+
+  /**
    * Validates updates and commits them inside a transaction block.
    */
   update(work: Work): void {
@@ -182,6 +200,125 @@ export class WorksRepository {
       return row.count > 0;
     }
     return false;
+  }
+
+  /**
+   * Performs global query searching and filters/sorts results dynamically.
+   */
+  searchAndFilter(
+    queryText: string,
+    filters: {
+      priority?: string;
+      status?: string;
+      category?: string;
+      deadline?: string;
+    },
+    sortBy: 'priority' | 'deadline' | 'created_at' | 'updated_at' | 'title'
+  ): Work[] {
+    let sql = 'SELECT * FROM works WHERE 1=1';
+    const params: any[] = [];
+
+    const cleanQuery = queryText.trim();
+    if (cleanQuery) {
+      sql += ' AND (title LIKE ? OR reference LIKE ? OR description LIKE ?)';
+      const queryParam = `%${cleanQuery}%`;
+      params.push(queryParam, queryParam, queryParam);
+    }
+
+    if (filters.priority) {
+      sql += ' AND priority = ?';
+      params.push(filters.priority);
+    }
+
+    if (filters.status) {
+      sql += ' AND status = ?';
+      params.push(filters.status);
+    }
+
+    if (filters.category) {
+      sql += ' AND category = ?';
+      params.push(filters.category);
+    }
+
+    if (filters.deadline) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (filters.deadline === 'overdue') {
+        sql += ' AND deadline < ? AND status != \'completed\'';
+        params.push(today.getTime());
+      } else if (filters.deadline === 'today') {
+        const tomorrow = new Date(today.getTime() + 86400000);
+        sql += ' AND deadline >= ? AND deadline < ?';
+        params.push(today.getTime(), tomorrow.getTime());
+      } else if (filters.deadline === 'tomorrow') {
+        const tomorrow = new Date(today.getTime() + 86400000);
+        const dayAfter = new Date(today.getTime() + 86400000 * 2);
+        sql += ' AND deadline >= ? AND deadline < ?';
+        params.push(tomorrow.getTime(), dayAfter.getTime());
+      } else if (filters.deadline === 'no_deadline') {
+        sql += ' AND deadline IS NULL';
+      }
+    }
+
+    // Sort operations
+    if (sortBy === 'priority') {
+      sql += " ORDER BY CASE priority WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 END DESC, title COLLATE NOCASE ASC";
+    } else if (sortBy === 'deadline') {
+      sql += ' ORDER BY CASE WHEN deadline IS NULL THEN 1 ELSE 0 END, deadline ASC, title COLLATE NOCASE ASC';
+    } else if (sortBy === 'created_at') {
+      sql += ' ORDER BY created_at DESC';
+    } else if (sortBy === 'updated_at') {
+      sql += ' ORDER BY updated_at DESC';
+    } else {
+      sql += ' ORDER BY title COLLATE NOCASE ASC';
+    }
+
+    const res = this.db.execute(sql, params);
+    const list: Work[] = [];
+    if (res.rows) {
+      for (let i = 0; i < res.rows.length; i++) {
+        const row = res.rows.item(i);
+        list.push(mapWorkRowToDomain(row));
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Calculates dashboard statistics across all tasks and notes.
+   */
+  getStatistics() {
+    const total = this.db.execute('SELECT COUNT(*) as count FROM works;').rows?.item(0).count || 0;
+    const completed = this.db.execute('SELECT COUNT(*) as count FROM works WHERE status = \'completed\';').rows?.item(0).count || 0;
+    const pending = this.db.execute('SELECT COUNT(*) as count FROM works WHERE status != \'completed\';').rows?.item(0).count || 0;
+    const highPriority = this.db.execute('SELECT COUNT(*) as count FROM works WHERE priority = \'high\';').rows?.item(0).count || 0;
+    const todayCount = this.db.execute('SELECT COUNT(*) as count FROM works WHERE category = \'today\';').rows?.item(0).count || 0;
+    const notesCount = this.db.execute('SELECT COUNT(*) as count FROM notes;').rows?.item(0).count || 0;
+
+    return {
+      total,
+      completed,
+      pending,
+      highPriority,
+      todayCount,
+      notesCount,
+    };
+  }
+
+  /**
+   * Resets local SQLite database by clearing all records, relying on cascade deletes.
+   */
+  resetDatabase() {
+    this.db.execute('BEGIN TRANSACTION;');
+    try {
+      this.db.execute('DELETE FROM works;');
+      this.db.execute('DELETE FROM notes;');
+      this.db.execute('COMMIT;');
+    } catch (err) {
+      this.db.execute('ROLLBACK;');
+      throw err;
+    }
   }
 
   /**
