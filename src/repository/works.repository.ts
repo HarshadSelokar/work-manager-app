@@ -23,11 +23,14 @@ export class WorksRepository {
     this.db.execute('BEGIN TRANSACTION;');
     try {
       this.db.execute(
-        'INSERT INTO works (id, title, description, status, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
+        'INSERT INTO works (id, title, reference, priority, description, deadline, status, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
         [
           dbObj.id,
           dbObj.title,
+          dbObj.reference,
+          dbObj.priority,
           dbObj.description,
+          dbObj.deadline,
           dbObj.status,
           dbObj.category,
           dbObj.created_at,
@@ -120,10 +123,13 @@ export class WorksRepository {
     this.db.execute('BEGIN TRANSACTION;');
     try {
       this.db.execute(
-        'UPDATE works SET title = ?, description = ?, status = ?, category = ?, updated_at = ? WHERE id = ?;',
+        'UPDATE works SET title = ?, reference = ?, priority = ?, description = ?, deadline = ?, status = ?, category = ?, updated_at = ? WHERE id = ?;',
         [
           dbObj.title,
+          dbObj.reference,
+          dbObj.priority,
           dbObj.description,
+          dbObj.deadline,
           dbObj.status,
           dbObj.category,
           dbObj.updated_at,
@@ -158,6 +164,24 @@ export class WorksRepository {
       console.error('Failed to update task in repository, rolled back:', error);
       throw error;
     }
+  }
+
+  /**
+   * Checks if a reference code already exists in the database.
+   * Useful for preventing duplicate reference constraints before database insert/update.
+   */
+  referenceExists(reference: string, excludeId?: string): boolean {
+    const query = excludeId
+      ? 'SELECT COUNT(*) as count FROM works WHERE reference = ? AND id != ?;'
+      : 'SELECT COUNT(*) as count FROM works WHERE reference = ?;';
+    const params = excludeId ? [reference, excludeId] : [reference];
+
+    const res = this.db.execute(query, params);
+    if (res.rows && res.rows.length > 0) {
+      const row = res.rows.item(0);
+      return row.count > 0;
+    }
+    return false;
   }
 
   /**

@@ -31,11 +31,13 @@ export interface WorkLink {
 export interface Work {
   id: string;
   title: string;
+  reference?: string;
   description?: string;
+  deadline?: Date;
   status: WorkStatus;
   category: WorkCategory;
-  priority: WorkPriority; // Domain-only property for now, demonstrating schema decoupling
-  createdAt: Date; // Domain uses Date object instead of raw number timestamps
+  priority: WorkPriority;
+  createdAt: Date;
   updatedAt: Date;
   images: WorkImage[];
   links: WorkLink[];

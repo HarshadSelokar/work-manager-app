@@ -15,12 +15,12 @@ export const mapWorkRowToDomain = (
   return {
     id: row.id,
     title: row.title,
+    reference: row.reference || undefined,
     description: row.description || undefined,
+    deadline: row.deadline ? new Date(row.deadline) : undefined,
     status: row.status as WorkStatus,
     category: row.category as WorkCategory,
-    // Decode priority (defaults to MEDIUM since the DB table does not carry priority)
     priority: (row.priority as WorkPriority) || WorkPriority.MEDIUM,
-    // Decode timestamps (integers -> Date objects)
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     images: images.map(img => ({
@@ -41,10 +41,12 @@ export const mapWorkDomainToDb = (work: Work): any => {
   return {
     id: work.id,
     title: work.title,
+    reference: work.reference || null,
+    priority: work.priority,
     description: work.description || null,
+    deadline: work.deadline ? work.deadline.getTime() : null,
     status: work.status,
     category: work.category,
-    // Convert Date objects to Unix millisecond integers for storage
     created_at: work.createdAt.getTime(),
     updated_at: work.updatedAt.getTime(),
   };

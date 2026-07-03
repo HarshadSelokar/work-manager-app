@@ -15,8 +15,10 @@ export const runDatabaseVerification = (): void => {
   const newWork: Work = {
     id: testId,
     title: 'Finish SQLite Database Integration',
+    reference: 'REF-101',
     description:
       'Create SQLite schema, migrations, and repositories with transactional integrity.',
+    deadline: new Date(Date.now() + 86400000 * 2), // 2 days from now
     status: WorkStatus.IN_PROGRESS,
     category: WorkCategory.TODAY,
     priority: WorkPriority.HIGH,
