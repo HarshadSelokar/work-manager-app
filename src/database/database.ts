@@ -15,7 +15,7 @@ export const getDatabase = (): QuickSQLiteConnection => {
   console.log('Initializing SQLite database...');
 
   // 1. Open the database file
-  dbInstance = open({ name: 'work_manager.db' });
+  dbInstance = open({ name: 'work_manager_v3.db' });
 
   // 2. Enforce referential integrity (foreign key constraints)
   dbInstance.execute('PRAGMA foreign_keys = ON;');

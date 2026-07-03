@@ -13,7 +13,10 @@ export const CREATE_WORKS_TABLE = `
   CREATE TABLE IF NOT EXISTS works (
     id TEXT PRIMARY KEY NOT NULL,
     title TEXT NOT NULL,
+    reference TEXT UNIQUE,
+    priority TEXT NOT NULL CHECK(priority IN ('low', 'medium', 'high')),
     description TEXT,
+    deadline INTEGER,
     status TEXT NOT NULL CHECK(status IN ('todo', 'in_progress', 'completed')),
     category TEXT NOT NULL CHECK(category IN ('today', 'other')),
     created_at INTEGER NOT NULL,
