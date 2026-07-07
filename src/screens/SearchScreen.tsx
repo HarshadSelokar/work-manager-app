@@ -98,24 +98,6 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
     setSortBy('title');
   }, []);
 
-  const fabOptions = useMemo(() => [
-    {
-      label: 'Add Work',
-      icon: '➕',
-      onPress: () => navigation.navigate('AddWork'),
-    },
-    {
-      label: 'Quick Note',
-      icon: '✏️',
-      onPress: () => navigation.navigate('AddNote'),
-    },
-    {
-      label: 'Search',
-      icon: '🔍',
-      onPress: () => {},
-    },
-  ], [navigation]);
-
   return (
     <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
       {/* Search Input Bar Component */}

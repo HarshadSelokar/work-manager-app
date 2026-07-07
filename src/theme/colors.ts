@@ -1,44 +1,45 @@
 export const COLORS = {
   // Brand
-  primary: '#7C5CFC',
-  primaryLight: '#EDE9FE',
+  primary: '#7C5CFC', // Electric Purple
+  primaryLight: 'rgba(124, 92, 252, 0.15)', // Premium dark purple tint
   primaryDark: '#5B3FD9',
-  secondary: '#06B6D4',
+  secondary: '#00F0FF', // Neon Blue Accent
   secondaryDark: '#0891B2',
 
   // Priority (semantic)
   priorityHigh: '#EF4444',
-  priorityHighBg: '#FEF2F2',
+  priorityHighBg: 'rgba(239, 68, 68, 0.15)',
   priorityMedium: '#F59E0B',
-  priorityMediumBg: '#FFFBEB',
+  priorityMediumBg: 'rgba(245, 158, 11, 0.15)',
   priorityLow: '#10B981',
-  priorityLowBg: '#ECFDF5',
+  priorityLowBg: 'rgba(16, 185, 129, 0.15)',
 
   // Status / Feedback
   success: '#10B981',
-  successBg: '#ECFDF5',
+  successBg: 'rgba(16, 185, 129, 0.12)',
   warning: '#F59E0B',
-  warningBg: '#FFFBEB',
+  warningBg: 'rgba(245, 158, 11, 0.12)',
   danger: '#EF4444',
-  dangerBg: '#FEF2F2',
-  info: '#3B82F6',
-  infoBg: '#EFF6FF',
+  dangerBg: 'rgba(239, 68, 68, 0.12)',
+  info: '#06B6D4',
+  infoBg: 'rgba(6, 182, 212, 0.12)',
 
   // Surfaces
-  background: '#F5F5F7',
-  surface: '#FFFFFF',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  divider: '#F3F4F6',
+  background: '#0B0B0F',
+  surface: '#121218',
+  card: '#1A1A22',
+  elevated: '#22222D',
+  border: '#2B2B35',
+  divider: '#2B2B35',
 
   // Text
-  textPrimary: '#111827',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  textInverse: '#FFFFFF',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#A3A3B2',
+  textTertiary: '#6B6B7A',
+  textInverse: '#0B0B0F',
   textLight: '#FFFFFF',
 
   // Overlays
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  shimmer: '#E5E7EB',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  shimmer: '#22222D',
 };

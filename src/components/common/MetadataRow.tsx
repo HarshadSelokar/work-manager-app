@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
-import { theme } from '@theme/index';
 import { Text } from './Text';
 
 interface MetadataItem {
-  icon: string;
+  icon: string | React.ReactNode;
   value: string | number;
 }
 
@@ -28,9 +27,18 @@ export const MetadataRow: React.FC<MetadataRowProps> = React.memo(
                 ·
               </Text>
             ) : null}
-            <Text variant="caption" color="textSecondary">
-              {item.icon} {item.value}
-            </Text>
+            <View style={styles.itemContent}>
+              {typeof item.icon === 'string' ? (
+                <Text variant="caption" color="textSecondary">
+                  {item.icon}
+                </Text>
+              ) : (
+                item.icon
+              )}
+              <Text variant="caption" color="textSecondary" style={styles.valueText}>
+                {item.value}
+              </Text>
+            </View>
           </View>
         ))}
       </View>
@@ -48,7 +56,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  valueText: {
+    // Spacer between icon and text value
+  },
   separator: {
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
 });

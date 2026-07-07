@@ -1,10 +1,12 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import { theme } from '@theme/index';
 import { Text } from './Text';
+import { Button } from './Button';
 
 interface EmptyStateProps {
-  emoji?: string;
+  emoji?: string; // Kept for backward compatibility
+  icon?: React.ReactNode; // Modern Lucide Icon
   title: string;
   description: string;
   actionLabel?: string;
@@ -13,22 +15,31 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = React.memo(
-  ({ emoji = '📭', title, description, actionLabel, onAction, style }) => {
+  ({ emoji, icon, title, description, actionLabel, onAction, style }) => {
     return (
       <View style={[styles.container, style]}>
-        <Text style={styles.emoji}>{emoji}</Text>
-        <Text variant="titleMedium" color="textPrimary" align="center" style={styles.title}>
+        <View style={styles.iconWrapper}>
+          {icon ? (
+            icon
+          ) : emoji ? (
+            <Text style={styles.emoji}>{emoji}</Text>
+          ) : (
+            <Text style={styles.emoji}>📂</Text>
+          )}
+        </View>
+        <Text variant="titleLarge" color="textPrimary" align="center" style={styles.title}>
           {title}
         </Text>
-        <Text variant="bodyMedium" color="textTertiary" align="center" style={styles.description}>
+        <Text variant="bodyMedium" color="textSecondary" align="center" style={styles.description}>
           {description}
         </Text>
         {actionLabel && onAction ? (
-          <TouchableOpacity activeOpacity={0.7} style={styles.actionButton} onPress={onAction}>
-            <Text variant="bodyMedium" fontWeight="semiBold" color="primary">
-              {actionLabel}
-            </Text>
-          </TouchableOpacity>
+          <Button
+            title={actionLabel}
+            onPress={onAction}
+            variant="secondary"
+            style={styles.actionButton}
+          />
         ) : null}
       </View>
     );
@@ -42,23 +53,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconWrapper: {
+    marginBottom: theme.spacing.md,
+    opacity: 0.8,
+  },
   emoji: {
     fontSize: 48,
-    marginBottom: theme.spacing.md,
   },
   title: {
     marginBottom: theme.spacing.xs,
+    letterSpacing: -0.2,
   },
   description: {
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
+    lineHeight: 19,
+    marginBottom: theme.spacing.lg,
+    maxWidth: 280,
   },
   actionButton: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.round,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight,
+    minWidth: 140,
+    marginTop: theme.spacing.sm,
   },
 });

@@ -65,6 +65,24 @@ export const WorkDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   }, [work, worksRepo, fetchWorkDetails]);
 
+  const updatePriority = useCallback((newPriority: WorkPriority) => {
+    if (!work) {
+      return;
+    }
+    const updated: Work = {
+      ...work,
+      priority: newPriority,
+      updatedAt: new Date(),
+    };
+
+    try {
+      worksRepo.update(updated);
+      fetchWorkDetails();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update task priority.');
+    }
+  }, [work, worksRepo, fetchWorkDetails]);
+
   // Change Priority Actions
   const handleChangePriority = useCallback(() => {
     if (!work) {
@@ -90,25 +108,7 @@ export const WorkDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
       ],
       { cancelable: true }
     );
-  }, [work]);
-
-  const updatePriority = (newPriority: WorkPriority) => {
-    if (!work) {
-      return;
-    }
-    const updated: Work = {
-      ...work,
-      priority: newPriority,
-      updatedAt: new Date(),
-    };
-
-    try {
-      worksRepo.update(updated);
-      fetchWorkDetails();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update task priority.');
-    }
-  };
+  }, [work, updatePriority]);
 
   // Open URL Link
   const handleOpenLink = useCallback((url: string) => {

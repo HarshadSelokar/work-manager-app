@@ -17,13 +17,13 @@ export const StatChip: React.FC<StatChipProps> = React.memo(
     return (
       <View style={[styles.chip, style]}>
         <Text
-          variant="titleLarge"
+          variant="displaySmall"
           fontWeight="bold"
           style={{ color: accentColor }}
         >
           {value}
         </Text>
-        <Text variant="caption" color="textTertiary">
+        <Text variant="overline" color="textSecondary" style={styles.label}>
           {label}
         </Text>
       </View>
@@ -33,13 +33,18 @@ export const StatChip: React.FC<StatChipProps> = React.memo(
 
 const styles = StyleSheet.create({
   chip: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: 'rgba(26, 26, 34, 0.65)',
     borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 72,
-    ...theme.elevation.xs,
+    flex: 1,
+  },
+  label: {
+    marginTop: theme.spacing.xs - 2,
+    fontSize: 9,
   },
 });

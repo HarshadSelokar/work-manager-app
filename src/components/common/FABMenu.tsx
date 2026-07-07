@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, TouchableOpacity, Animated, Pressable } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import { theme } from '@theme/index';
 import { Text } from './Text';
 
 interface FABMenuOption {
   label: string;
-  icon: string;
+  icon: string | React.ReactNode;
   onPress: () => void;
 }
 
@@ -21,7 +22,8 @@ export const FABMenu: React.FC<FABMenuProps> = ({ options }) => {
     const toValue = isOpen ? 0 : 1;
     Animated.spring(animation, {
       toValue,
-      friction: 6,
+      tension: 90,
+      friction: 8,
       useNativeDriver: true,
     }).start();
     setIsOpen(!isOpen);
@@ -29,29 +31,39 @@ export const FABMenu: React.FC<FABMenuProps> = ({ options }) => {
 
   const backdropOpacity = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.4],
+    outputRange: [0, 0.65],
   });
 
   const rotation = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '135deg'],
+    outputRange: ['0deg', '45deg'], // Rotates Plus into an X
+  });
+
+  const menuScale = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 1],
   });
 
   return (
     <>
       {isOpen && (
         <Pressable style={styles.backdrop} onPress={toggleMenu}>
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000000', opacity: backdropOpacity }]} />
+          <Animated.View style={[styles.backdropFill, { opacity: backdropOpacity }]} />
         </Pressable>
       )}
       
       <View style={styles.container}>
         {isOpen && (
-          <View style={styles.menuContainer}>
+          <Animated.View style={[styles.menuContainer, { transform: [{ scale: menuScale }] }]}>
             {options.map((opt, i) => {
               const translateY = animation.interpolate({
                 inputRange: [0, 1],
-                outputRange: [50 * (options.length - i), 0],
+                outputRange: [30 * (options.length - i), 0],
+              });
+
+              const optionOpacity = animation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
               });
 
               return (
@@ -60,12 +72,13 @@ export const FABMenu: React.FC<FABMenuProps> = ({ options }) => {
                   style={[
                     styles.optionRow,
                     {
+                      opacity: optionOpacity,
                       transform: [{ translateY }],
                     },
                   ]}
                 >
                   <View style={styles.labelContainer}>
-                    <Text variant="caption" fontWeight="semiBold" style={styles.labelText}>
+                    <Text variant="caption" fontWeight="semiBold" color="textPrimary">
                       {opt.label}
                     </Text>
                   </View>
@@ -77,17 +90,21 @@ export const FABMenu: React.FC<FABMenuProps> = ({ options }) => {
                       opt.onPress();
                     }}
                   >
-                    <Text style={styles.optionIcon}>{opt.icon}</Text>
+                    {typeof opt.icon === 'string' ? (
+                      <Text style={styles.optionIconText}>{opt.icon}</Text>
+                    ) : (
+                      opt.icon
+                    )}
                   </TouchableOpacity>
                 </Animated.View>
               );
             })}
-          </View>
+          </Animated.View>
         )}
 
         <TouchableOpacity activeOpacity={0.9} style={styles.fab} onPress={toggleMenu}>
-          <Animated.View style={[styles.fabIconWrapper, { transform: [{ rotate: rotation }] }]}>
-            <Text style={styles.fabIcon}>+</Text>
+          <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+            <Plus size={24} color="#FFFFFF" strokeWidth={2.5} />
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -103,6 +120,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 99,
+  },
+  backdropFill: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000000',
   },
   container: {
     position: 'absolute',
@@ -122,45 +143,42 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   labelContainer: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: '#1E1E28', // Elevated dark surface
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.radius.xs,
-    ...theme.elevation.xs,
-  },
-  labelText: {
-    color: theme.colors.textPrimary,
+    paddingVertical: 5,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   optionButton: {
-    backgroundColor: theme.colors.surface,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    backgroundColor: '#1E1E28',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.elevation.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  optionIcon: {
+  optionIconText: {
     fontSize: 16,
   },
   fab: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary, // Electric Purple
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.elevation.md,
-  },
-  fabIconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabIcon: {
-    color: '#ffffff',
-    fontSize: 28,
-    lineHeight: 28,
-    marginTop: -2,
-    fontWeight: 'bold',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
   },
 });

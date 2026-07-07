@@ -1,5 +1,5 @@
-import { Work, WorkImage, WorkLink, WorkStatus, WorkCategory, WorkPriority } from './work.model';
-import { Note, NoteImage } from './note.model';
+import { Work, WorkStatus, WorkCategory, WorkPriority } from './work.model';
+import { Note } from './note.model';
 
 /**
  * Mappers to bridge the SQLite Database layer and the Domain model layer.

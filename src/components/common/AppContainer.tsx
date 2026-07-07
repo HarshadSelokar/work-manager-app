@@ -28,7 +28,7 @@ export const AppContainer: React.FC<AppContainerProps> = ({
   return (
     <View style={[containerStyle, style]}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle="light-content"
         backgroundColor={theme.colors.background}
         translucent
       />

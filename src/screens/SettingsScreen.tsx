@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AppContainer, Text, Button, Divider } from '@components/common';
+import { AppContainer, Text, Divider } from '@components/common';
 import { WorksRepository } from '../repository/works.repository';
 import { theme } from '@theme/index';
 
@@ -70,7 +70,7 @@ export const SettingsScreen: React.FC = () => {
         'Database Exported',
         `Database backup JSON package created successfully:\n\n${JSON.stringify(backupData, null, 2)}`
       );
-    } catch (err) {
+    } catch {
       Alert.alert('Export Failed', 'An error occurred during database export.');
     }
   }, [stats]);

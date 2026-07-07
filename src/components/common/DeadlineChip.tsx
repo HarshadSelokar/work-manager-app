@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Calendar, Clock, AlertTriangle } from 'lucide-react-native';
 import { theme } from '@theme/index';
 import { Text } from './Text';
 
@@ -26,35 +27,42 @@ export const DeadlineChip: React.FC<DeadlineChipProps> = React.memo(({ deadline 
         backgroundColor: theme.colors.priorityHighBg,
         textColor: 'priorityHigh' as const,
         label: 'Overdue',
+        icon: <AlertTriangle size={12} color={theme.colors.priorityHigh} />,
       };
     } else if (diffDays === 0) {
       return {
         backgroundColor: theme.colors.priorityMediumBg,
         textColor: 'priorityMedium' as const,
         label: 'Due Today',
+        icon: <Clock size={12} color={theme.colors.priorityMedium} />,
       };
     } else if (diffDays === 1) {
       return {
         backgroundColor: theme.colors.priorityMediumBg,
         textColor: 'priorityMedium' as const,
         label: 'Due Tomorrow',
+        icon: <Clock size={12} color={theme.colors.priorityMedium} />,
       };
     } else {
       return {
-        backgroundColor: theme.colors.divider,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         textColor: 'textSecondary' as const,
-        label: `Due ${dueDate.toLocaleDateString()}`,
+        label: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        icon: <Calendar size={12} color={theme.colors.textSecondary} />,
       };
     }
   };
 
-  const { backgroundColor, textColor, label } = getDeadlineStyle();
+  const { backgroundColor, textColor, label, icon } = getDeadlineStyle();
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <Text variant="caption" fontWeight="semiBold" color={textColor}>
-        {label}
-      </Text>
+      <View style={styles.content}>
+        {icon}
+        <Text variant="caption" fontWeight="semiBold" color={textColor} style={styles.text}>
+          {label}
+        </Text>
+      </View>
     </View>
   );
 });
@@ -62,8 +70,16 @@ export const DeadlineChip: React.FC<DeadlineChipProps> = React.memo(({ deadline 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
-    borderRadius: theme.radius.round,
+    paddingVertical: 3,
+    borderRadius: theme.radius.sm, // Soft square radius
     alignSelf: 'flex-start',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  text: {
+    letterSpacing: 0.2,
   },
 });
