@@ -2,6 +2,8 @@ export * from './AppContainer';
 export * from './Text';
 export * from './Button';
 export * from './PriorityBadge';
+export * from './StatusChip';
+export * from './StatisticCard';
 export * from './EmptyState';
 export * from './DeadlineChip';
 export * from './LoadingView';

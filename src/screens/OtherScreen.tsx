@@ -5,11 +5,20 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MainTabParamList, RootStackParamList } from '@navigation/types';
-import { AppContainer, Text, EmptyState, SectionHeader, LoadingView, FABMenu } from '@components/common';
+import {
+  AppContainer,
+  Text,
+  EmptyState,
+  SectionHeader,
+  LoadingView,
+  FABMenu,
+  GradientBackground,
+} from '@components/common';
 import { WorkCard } from '@components/work/WorkCard';
 import { WorksRepository } from '../repository/works.repository';
 import { Work, WorkPriority, WorkCategory, WorkStatus } from '@models/index';
 import { theme } from '@theme/index';
+import { Plus, FileText, Search, CalendarDays } from 'lucide-react-native';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Other'>,
@@ -37,7 +46,6 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [worksRepo]);
 
-  // Fetch 'other' tasks whenever screen gets focused
   useFocusEffect(
     useCallback(() => {
       setIsLoading(true);
@@ -49,19 +57,14 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchTasks();
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 400);
+    setTimeout(() => { setIsRefreshing(false); }, 400);
   }, [fetchTasks]);
 
-  // Group and sort works into Overdue, Tomorrow, This Week, Later, and No Deadline sections
   const sections = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-
     const sevenDaysLater = new Date(today);
     sevenDaysLater.setDate(today.getDate() + 7);
 
@@ -72,29 +75,18 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
     const noDeadlineList: Work[] = [];
 
     works.forEach(work => {
-      // Filter out completed tasks as they belong in Completed tab
-      if (work.status === WorkStatus.COMPLETED) {
-        return;
-      }
-
-      if (!work.deadline) {
-        noDeadlineList.push(work);
-        return;
-      }
+      if (work.status === WorkStatus.COMPLETED) return;
+      if (!work.deadline) { noDeadlineList.push(work); return; }
 
       const dueDate = new Date(work.deadline);
       dueDate.setHours(0, 0, 0, 0);
-
       const dueTime = dueDate.getTime();
-      const todayTime = today.getTime();
-      const tomorrowTime = tomorrow.getTime();
-      const weekTime = sevenDaysLater.getTime();
 
-      if (dueTime < todayTime) {
+      if (dueTime < today.getTime()) {
         overdueList.push(work);
-      } else if (dueTime === tomorrowTime) {
+      } else if (dueTime === tomorrow.getTime()) {
         tomorrowList.push(work);
-      } else if (dueTime > tomorrowTime && dueTime <= weekTime) {
+      } else if (dueTime > tomorrow.getTime() && dueTime <= sevenDaysLater.getTime()) {
         thisWeekList.push(work);
       } else {
         laterList.push(work);
@@ -105,9 +97,7 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
       const aTime = a.deadline ? a.deadline.getTime() : 0;
       const bTime = b.deadline ? b.deadline.getTime() : 0;
       const timeDiff = aTime - bTime;
-      if (timeDiff !== 0) {
-        return timeDiff;
-      }
+      if (timeDiff !== 0) return timeDiff;
       return priorityWeights[b.priority] - priorityWeights[a.priority];
     };
 
@@ -115,58 +105,33 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
     tomorrowList.sort(sortComparator);
     thisWeekList.sort(sortComparator);
     laterList.sort(sortComparator);
-
     noDeadlineList.sort((a, b) => {
-      const priorityDiff = priorityWeights[b.priority] - priorityWeights[a.priority];
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
+      const pd = priorityWeights[b.priority] - priorityWeights[a.priority];
+      if (pd !== 0) return pd;
       return a.createdAt.getTime() - b.createdAt.getTime();
     });
 
     const result = [];
     if (overdueList.length > 0) {
-      result.push({
-        title: 'Overdue Tasks',
-        accentColor: theme.colors.priorityHigh,
-        data: overdueList,
-      });
+      result.push({ title: 'Overdue', accentColor: theme.colors.danger, data: overdueList });
     }
     if (tomorrowList.length > 0) {
-      result.push({
-        title: 'Tomorrow',
-        accentColor: theme.colors.priorityMedium,
-        data: tomorrowList,
-      });
+      result.push({ title: 'Tomorrow', accentColor: theme.colors.warning, data: tomorrowList });
     }
     if (thisWeekList.length > 0) {
-      result.push({
-        title: 'This Week',
-        accentColor: theme.colors.primary,
-        data: thisWeekList,
-      });
+      result.push({ title: 'This Week', accentColor: theme.colors.primary, data: thisWeekList });
     }
     if (laterList.length > 0) {
-      result.push({
-        title: 'Later',
-        accentColor: theme.colors.secondary,
-        data: laterList,
-      });
+      result.push({ title: 'Later', accentColor: theme.colors.secondary, data: laterList });
     }
     if (noDeadlineList.length > 0) {
-      result.push({
-        title: 'No Deadline Set',
-        accentColor: theme.colors.textSecondary,
-        data: noDeadlineList,
-      });
+      result.push({ title: 'No Deadline', accentColor: theme.colors.textSecondary, data: noDeadlineList });
     }
     return result;
   }, [works]);
 
   const handleCardPress = useCallback(
-    (id: string) => {
-      navigation.navigate('WorkDetails', { workId: id });
-    },
+    (id: string) => { navigation.navigate('WorkDetails', { workId: id }); },
     [navigation]
   );
 
@@ -186,77 +151,96 @@ export const OtherScreen: React.FC<Props> = ({ navigation }) => {
 
   const fabOptions = useMemo(() => [
     {
-      label: 'Add Work',
-      icon: '➕',
+      label: 'New Task',
+      icon: <Plus size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('AddWork'),
+      color: theme.colors.primary,
     },
     {
       label: 'Quick Note',
-      icon: '✏️',
+      icon: <FileText size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('AddNote'),
+      color: theme.colors.secondary,
     },
     {
       label: 'Search',
-      icon: '🔍',
+      icon: <Search size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('Search'),
+      color: theme.colors.elevated,
     },
   ], [navigation]);
 
   return (
     <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="displaySmall" fontWeight="bold">
-          Upcoming Planner
-        </Text>
-        <Text variant="bodyMedium" color="textSecondary">
-          Monitor your backlog milestones and plan future works.
-        </Text>
-      </View>
+      <GradientBackground>
+        {/* ─── Header ─── */}
+        <View style={styles.header}>
+          <View style={styles.headerIconRow}>
+            <View style={styles.headerIcon}>
+              <CalendarDays size={20} color={theme.colors.primary} />
+            </View>
+            <View>
+              <Text variant="displaySmall" fontWeight="bold">Upcoming</Text>
+              <Text variant="bodySmall" color="textSecondary">Plan and manage your backlog</Text>
+            </View>
+          </View>
+        </View>
 
-      {isLoading ? (
-        <LoadingView message="Loading routine backlog..." />
-      ) : (
-        <SectionList
-          sections={sections}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
-          stickySectionHeadersEnabled={false}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <EmptyState
-              emoji="📅"
-              title="No upcoming works!"
-              description="Your backlog planner is empty. Tap Add Work to schedule future items."
-              actionLabel="Add Work"
-              onAction={() => navigation.navigate('AddWork')}
-              style={styles.emptyState}
-            />
-          }
-        />
-      )}
+        {isLoading ? (
+          <LoadingView message="Loading backlog..." />
+        ) : (
+          <SectionList
+            sections={sections}
+            renderItem={renderItem}
+            renderSectionHeader={renderSectionHeader}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.listContent}
+            stickySectionHeadersEnabled={false}
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <EmptyState
+                icon={<CalendarDays size={48} color={theme.colors.primary} />}
+                title="No upcoming tasks!"
+                description="Your backlog is clear. Schedule future tasks to stay organized."
+                actionLabel="Add Work"
+                onAction={() => navigation.navigate('AddWork')}
+                style={styles.emptyState}
+              />
+            }
+          />
+        )}
 
-      {/* Global FAB Menu */}
-      <FABMenu options={fabOptions} />
+        <FABMenu options={fabOptions} />
+      </GradientBackground>
     </AppContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.background,
-  },
+  container: { backgroundColor: theme.colors.background },
   header: {
     paddingHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  headerIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContent: {
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: 90, // Leave space for FAB
+    paddingBottom: 110,
   },
   emptyState: {
     marginTop: theme.spacing.xl,

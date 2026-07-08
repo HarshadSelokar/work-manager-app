@@ -1,5 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Dimensions,
+  Pressable,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -15,13 +23,27 @@ import {
   GradientBackground,
   GlassCard,
   ProgressRing,
+  StatisticCard,
 } from '@components/common';
 import { WorkCard } from '@components/work/WorkCard';
 import { WorksRepository } from '../repository/works.repository';
 import { NotesRepository } from '../repository/notes.repository';
 import { Work, WorkPriority, WorkCategory, WorkStatus, Note } from '@models/index';
 import { theme } from '@theme/index';
-import { Target, AlertCircle, Plus, FileText, Search, ChevronRight, BookOpen, Clock } from 'lucide-react-native';
+import {
+  Target,
+  AlertCircle,
+  Plus,
+  FileText,
+  Search,
+  ChevronRight,
+  BookOpen,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
+  Layers,
+} from 'lucide-react-native';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Today'>,
@@ -44,13 +66,12 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
       const todayTasks = worksRepo.findByCategory(WorkCategory.TODAY);
       const allNotes = notesRepo.findAll();
       setWorks(todayTasks);
-      setNotes(allNotes.slice(0, 5)); // Show top 5 recent notes
+      setNotes(allNotes.slice(0, 6));
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     }
   }, [worksRepo, notesRepo]);
 
-  // Fetch data on screen focus
   useFocusEffect(
     useCallback(() => {
       setIsLoading(true);
@@ -62,26 +83,19 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchData();
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 400);
+    setTimeout(() => { setIsRefreshing(false); }, 400);
   }, [fetchData]);
 
   const handleCardPress = useCallback(
-    (id: string) => {
-      navigation.navigate('WorkDetails', { workId: id });
-    },
+    (id: string) => { navigation.navigate('WorkDetails', { workId: id }); },
     [navigation]
   );
 
   const handleNotePress = useCallback(
-    (id: string) => {
-      navigation.navigate('NoteDetails', { noteId: id });
-    },
+    (id: string) => { navigation.navigate('NoteDetails', { noteId: id }); },
     [navigation]
   );
 
-  // Greeting & Date calculations
   const greeting = useMemo(() => {
     const hours = new Date().getHours();
     if (hours < 12) return 'Good morning';
@@ -90,15 +104,12 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const formattedDate = useMemo(() => {
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric' };
-    return new Date().toLocaleDateString('en-US', options);
+    return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   }, []);
 
-  // Filter tasks into overdue, high-priority, routine pending, and completed categories
   const dashboardBuckets = useMemo(() => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-
     const overdue: Work[] = [];
     const highPriority: Work[] = [];
     const routine: Work[] = [];
@@ -127,22 +138,17 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
     const completedCount = works.filter(w => w.status === WorkStatus.COMPLETED).length;
     const overdueCount = dashboardBuckets.overdue.length;
     const pendingCount = total - completedCount;
-
-    return { total, completed: completedCount, overdue: overdueCount, pending: pendingCount };
+    const highCount = dashboardBuckets.highPriority.length;
+    return { total, completed: completedCount, overdue: overdueCount, pending: pendingCount, high: highCount };
   }, [works, dashboardBuckets]);
 
-  // Today's Focus task selection (highest priority pending task, or first pending task)
   const todaysFocus = useMemo(() => {
     const pending = [...dashboardBuckets.overdue, ...dashboardBuckets.highPriority, ...dashboardBuckets.routine];
     if (pending.length === 0) return null;
-
-    // Try to find high priority task first
     const high = pending.find(w => w.priority === WorkPriority.HIGH);
     if (high) return high;
-
-    const overdue = pending.find(w => w.deadline !== undefined);
-    if (overdue) return overdue;
-
+    const withDeadline = pending.find(w => w.deadline !== undefined);
+    if (withDeadline) return withDeadline;
     return pending[0];
   }, [dashboardBuckets]);
 
@@ -151,28 +157,31 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
   }, [stats]);
 
   const motivationalMessage = useMemo(() => {
-    if (stats.total === 0) return 'Add a task to start your day.';
-    if (completionProgress === 1) return 'Outstanding! All tasks completed.';
-    if (completionProgress >= 0.7) return 'Almost there! Keep pushing.';
-    if (completionProgress >= 0.4) return 'Nice progress! Halfway through.';
-    return `You have ${stats.pending} pending tasks for today.`;
+    if (stats.total === 0) return 'Start fresh — add your first task.';
+    if (completionProgress === 1) return 'Outstanding! All tasks completed. 🎉';
+    if (completionProgress >= 0.7) return 'Almost there! Just a few more.';
+    if (completionProgress >= 0.4) return 'Great momentum! Keep it up.';
+    return `${stats.pending} task${stats.pending > 1 ? 's' : ''} waiting for your attention.`;
   }, [stats, completionProgress]);
 
   const fabOptions = useMemo(() => [
     {
-      label: 'Add Work',
+      label: 'New Task',
       icon: <Plus size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('AddWork'),
+      color: theme.colors.primary,
     },
     {
       label: 'Quick Note',
       icon: <FileText size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('AddNote'),
+      color: theme.colors.secondary,
     },
     {
       label: 'Search',
       icon: <Search size={18} color="#FFFFFF" />,
       onPress: () => navigation.navigate('Search'),
+      color: theme.colors.elevated,
     },
   ], [navigation]);
 
@@ -197,119 +206,134 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
             />
           }
         >
-          {/* Welcome Greeting Header */}
+          {/* ─── Header ─── */}
           <View style={styles.headerBlock}>
-            <Text variant="displaySmall" fontWeight="bold">
-              {greeting}, Harshad
-            </Text>
-            <Text variant="bodyMedium" color="textSecondary">
-              {formattedDate}
-            </Text>
-          </View>
-
-          {/* Quick Actions Row */}
-          <View style={styles.quickActionsRow}>
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('AddWork')}
-            >
-              <View style={[styles.actionIconBg, styles.actionIconPurple]}>
-                <Plus size={16} color={theme.colors.primary} />
-              </View>
-              <Text variant="caption" fontWeight="semiBold" color="textSecondary">
-                New Task
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('AddNote')}
-            >
-              <View style={[styles.actionIconBg, styles.actionIconBlue]}>
-                <FileText size={16} color={theme.colors.secondary} />
-              </View>
-              <Text variant="caption" fontWeight="semiBold" color="textSecondary">
-                New Note
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('Search')}
-            >
-              <View style={[styles.actionIconBg, styles.actionIconWhite]}>
-                <Search size={16} color="#FFFFFF" />
-              </View>
-              <Text variant="caption" fontWeight="semiBold" color="textSecondary">
-                Search
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Overall Progress Ring Card */}
-          <GlassCard style={styles.progressCard} elevation="sm">
-            <View style={styles.progressContent}>
-              <ProgressRing progress={completionProgress} size={64} strokeWidth={6} />
-              <View style={styles.progressTextSection}>
-                <Text variant="titleMedium" fontWeight="bold">
-                  Today's Progress
+            <View style={styles.headerRow}>
+              <View style={styles.headerTextBlock}>
+                <Text variant="displaySmall" fontWeight="bold" style={styles.greetingText}>
+                  {greeting} 👋
                 </Text>
+                <Text variant="bodyMedium" color="textSecondary" style={styles.dateText}>
+                  {formattedDate}
+                </Text>
+              </View>
+              <Pressable style={styles.searchIconBtn} onPress={() => navigation.navigate('Search')}>
+                <Search size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* ─── Hero Progress Card ─── */}
+          <GlassCard style={styles.progressHeroCard} elevation="md">
+            <View style={styles.progressContent}>
+              <ProgressRing progress={completionProgress} size={72} strokeWidth={7} showPercent />
+              <View style={styles.progressTextSection}>
+                <Text variant="titleMedium" fontWeight="bold">Today's Progress</Text>
                 <Text variant="bodySmall" color="textSecondary" style={styles.progressSubtext}>
                   {motivationalMessage}
                 </Text>
                 {stats.total > 0 && (
                   <Text variant="caption" color="primary" fontWeight="bold">
-                    {Math.round(completionProgress * 100)}% Completed ({stats.completed}/{stats.total})
+                    {stats.completed} of {stats.total} tasks done
                   </Text>
                 )}
               </View>
             </View>
           </GlassCard>
 
-          {/* Today's Focus Card */}
+          {/* ─── Stat Chips Row ─── */}
+          {hasTasks && (
+            <View style={styles.statsRow}>
+              <StatisticCard
+                label="Pending"
+                value={stats.pending}
+                icon={<Layers size={16} color={theme.colors.primary} />}
+                color={theme.colors.primary}
+              />
+              <StatisticCard
+                label="Completed"
+                value={stats.completed}
+                icon={<CheckCircle2 size={16} color={theme.colors.success} />}
+                color={theme.colors.success}
+              />
+              <StatisticCard
+                label="Overdue"
+                value={stats.overdue}
+                icon={<AlertTriangle size={16} color={theme.colors.danger} />}
+                color={theme.colors.danger}
+              />
+              <StatisticCard
+                label="Priority"
+                value={stats.high}
+                icon={<TrendingUp size={16} color={theme.colors.warning} />}
+                color={theme.colors.warning}
+              />
+            </View>
+          )}
+
+          {/* ─── Quick Actions ─── */}
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('AddWork')}>
+              <View style={[styles.qaIcon, styles.qaIconPurple]}>
+                <Plus size={16} color={theme.colors.primary} />
+              </View>
+              <Text variant="caption" fontWeight="semiBold" color="textSecondary">New Task</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('AddNote')}>
+              <View style={[styles.qaIcon, styles.qaIconBlue]}>
+                <FileText size={16} color={theme.colors.secondary} />
+              </View>
+              <Text variant="caption" fontWeight="semiBold" color="textSecondary">Note</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('Search')}>
+              <View style={[styles.qaIcon, styles.qaIconGray]}>
+                <Search size={16} color={theme.colors.textSecondary} />
+              </View>
+              <Text variant="caption" fontWeight="semiBold" color="textSecondary">Search</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ─── Today's Focus ─── */}
           {todaysFocus && (
             <View style={styles.focusSection}>
               <SectionHeader title="Today's Focus" count={1} accentColor={theme.colors.secondary} />
               <GlassCard style={styles.focusCard} elevation="md">
                 <View style={styles.focusHeader}>
                   <View style={styles.focusHeaderTitle}>
-                    <Target size={16} color={theme.colors.secondary} style={styles.focusIcon} />
-                    <Text variant="overline" color="textSecondary">
+                    <Target size={14} color={theme.colors.secondary} />
+                    <Text variant="overline" color="textSecondary" style={styles.focusLabel}>
                       PRIMARY OBJECTIVE
                     </Text>
                   </View>
                   {todaysFocus.priority === WorkPriority.HIGH && (
-                    <View style={styles.focusPriorityBadge}>
+                    <View style={styles.criticalBadge}>
                       <AlertCircle size={10} color={theme.colors.priorityHigh} />
-                      <Text variant="overline" style={styles.focusPriorityText}>
-                        CRITICAL
-                      </Text>
+                      <Text variant="caption" style={styles.criticalText}>CRITICAL</Text>
                     </View>
                   )}
                 </View>
-                <Text variant="titleLarge" fontWeight="bold" style={styles.focusTaskTitle} numberOfLines={2}>
+                <Text variant="titleLarge" fontWeight="bold" style={styles.focusTitle} numberOfLines={2}>
                   {todaysFocus.title}
                 </Text>
                 {todaysFocus.description ? (
-                  <Text variant="bodySmall" color="textSecondary" style={styles.focusDesc} numberOfLines={2}>
+                  <Text variant="bodySmall" color="textSecondary" numberOfLines={2} style={styles.focusDesc}>
                     {todaysFocus.description}
                   </Text>
                 ) : null}
-                
                 <View style={styles.focusFooter}>
                   <View style={styles.focusDeadline}>
                     <Clock size={12} color={theme.colors.textSecondary} />
                     <Text variant="caption" color="textSecondary">
                       {todaysFocus.deadline
-                        ? new Date(todaysFocus.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : 'No time set'}
+                        ? new Date(todaysFocus.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : 'No deadline'}
                     </Text>
                   </View>
                   <TouchableOpacity
-                    style={styles.focusActionButton}
+                    style={styles.focusViewBtn}
                     onPress={() => handleCardPress(todaysFocus.id)}
                   >
-                    <Text variant="caption" fontWeight="bold" color="textInverse">
+                    <Text variant="caption" fontWeight="bold" style={styles.focusViewBtnText}>
                       View details
                     </Text>
                   </TouchableOpacity>
@@ -318,52 +342,45 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           )}
 
-          {/* Task Sections */}
+          {/* ─── Task Sections ─── */}
           {!hasTasks ? (
             <EmptyState
               icon={<Target size={48} color={theme.colors.primary} />}
               title="All clear for today!"
-              description="No tasks scheduled. Relax or tap the add button above to schedule a new task."
+              description="No tasks scheduled. Tap the + button to add your first task."
               actionLabel="Add Work"
               onAction={() => navigation.navigate('AddWork')}
               style={styles.emptyState}
             />
           ) : (
             <View style={styles.sectionsList}>
-              {/* Overdue Section */}
               {dashboardBuckets.overdue.length > 0 && (
                 <View>
-                  <SectionHeader title="Overdue Tasks" count={dashboardBuckets.overdue.length} accentColor={theme.colors.priorityHigh} />
+                  <SectionHeader title="Overdue" count={dashboardBuckets.overdue.length} accentColor={theme.colors.priorityHigh} />
                   {dashboardBuckets.overdue.map(work => (
                     <WorkCard key={work.id} work={work} onPress={handleCardPress} />
                   ))}
                 </View>
               )}
-
-              {/* High Priority Section */}
               {dashboardBuckets.highPriority.length > 0 && (
                 <View>
-                  <SectionHeader title="High Priority" count={dashboardBuckets.highPriority.length} accentColor={theme.colors.priorityMedium} />
+                  <SectionHeader title="High Priority" count={dashboardBuckets.highPriority.length} accentColor={theme.colors.warning} />
                   {dashboardBuckets.highPriority.map(work => (
                     <WorkCard key={work.id} work={work} onPress={handleCardPress} />
                   ))}
                 </View>
               )}
-
-              {/* Today's Pending Section */}
               {dashboardBuckets.routine.length > 0 && (
                 <View>
-                  <SectionHeader title="Today's Pending" count={dashboardBuckets.routine.length} accentColor={theme.colors.primary} />
+                  <SectionHeader title="Pending" count={dashboardBuckets.routine.length} accentColor={theme.colors.primary} />
                   {dashboardBuckets.routine.map(work => (
                     <WorkCard key={work.id} work={work} onPress={handleCardPress} />
                   ))}
                 </View>
               )}
-
-              {/* Recently Completed Section */}
               {dashboardBuckets.completed.length > 0 && (
                 <View>
-                  <SectionHeader title="Recently Completed" count={dashboardBuckets.completed.length} accentColor={theme.colors.success} />
+                  <SectionHeader title="Completed" count={dashboardBuckets.completed.length} accentColor={theme.colors.success} />
                   {dashboardBuckets.completed.map(work => (
                     <WorkCard key={work.id} work={work} onPress={handleCardPress} />
                   ))}
@@ -372,7 +389,7 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           )}
 
-          {/* Quick Notes Section */}
+          {/* ─── Quick Notes ─── */}
           {notes.length > 0 && (
             <View style={styles.notesSection}>
               <View style={styles.notesSectionHeader}>
@@ -394,22 +411,23 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
                     key={note.id}
                     activeOpacity={0.8}
                     onPress={() => handleNotePress(note.id)}
+                    style={styles.notePreviewWrapper}
                   >
                     <GlassCard style={styles.notePreviewCard} elevation="xs">
+                      <View style={styles.notePreviewHeader}>
+                        <BookOpen size={10} color={theme.colors.primary} />
+                      </View>
                       {note.title ? (
-                        <Text variant="titleMedium" fontWeight="bold" numberOfLines={1} style={styles.noteTitle}>
+                        <Text variant="bodySmall" fontWeight="semiBold" numberOfLines={1} style={styles.notePreviewTitle}>
                           {note.title}
                         </Text>
                       ) : null}
-                      <Text variant="bodySmall" color="textSecondary" numberOfLines={3} style={styles.noteContent}>
+                      <Text variant="caption" color="textSecondary" numberOfLines={4} style={styles.notePreviewContent}>
                         {note.content}
                       </Text>
-                      <View style={styles.noteCardFooter}>
-                        <BookOpen size={10} color={theme.colors.textTertiary} />
-                        <Text variant="caption" style={styles.noteDate} color="textTertiary">
-                          {new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                        </Text>
-                      </View>
+                      <Text variant="caption" color="textTertiary" style={styles.notePreviewDate}>
+                        {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Text>
                     </GlassCard>
                   </TouchableOpacity>
                 ))}
@@ -418,7 +436,7 @@ export const TodayScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </ScrollView>
 
-        {/* Global FAB Menu */}
+        {/* ─── FAB ─── */}
         <FABMenu options={fabOptions} />
       </GradientBackground>
     </AppContainer>
@@ -432,37 +450,37 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110, // Extra space to scroll past floating navigation & FAB
+    paddingBottom: 120,
   },
   headerBlock: {
     marginBottom: theme.spacing.md,
   },
-  quickActionsRow: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
   },
-  quickActionCard: {
+  headerTextBlock: {
     flex: 1,
-    backgroundColor: 'rgba(26, 26, 34, 0.55)',
+  },
+  greetingText: {
+    lineHeight: 30,
+  },
+  dateText: {
+    marginTop: 2,
+  },
+  searchIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    ...theme.elevation.xs,
   },
-  actionIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressCard: {
+  progressHeroCard: {
     marginBottom: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
@@ -474,44 +492,80 @@ const styles = StyleSheet.create({
   },
   progressTextSection: {
     flex: 1,
+    gap: 3,
   },
   progressSubtext: {
-    marginVertical: 2,
-    lineHeight: 16,
+    lineHeight: 17,
   },
+  statsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: 'rgba(26, 26, 34, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: theme.radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.sm,
+    alignItems: 'center',
+    gap: 6,
+  },
+  qaIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qaIconPurple: { backgroundColor: 'rgba(124, 92, 252, 0.15)' },
+  qaIconBlue: { backgroundColor: 'rgba(0, 240, 255, 0.12)' },
+  qaIconGray: { backgroundColor: 'rgba(255, 255, 255, 0.06)' },
   focusSection: {
     marginBottom: theme.spacing.md,
   },
   focusCard: {
-    borderColor: 'rgba(0, 240, 255, 0.25)', // Neon Blue translucent border
-    backgroundColor: 'rgba(26, 26, 34, 0.85)',
+    borderColor: 'rgba(0, 240, 255, 0.2)',
     padding: theme.spacing.md,
   },
   focusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 6,
   },
   focusHeaderTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
-  focusIcon: {
-    marginRight: 2,
+  focusLabel: {
+    marginLeft: 2,
   },
-  focusPriorityBadge: {
+  criticalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
   },
-  focusTaskTitle: {
-    fontSize: 16,
+  criticalText: {
+    color: theme.colors.priorityHigh,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  focusTitle: {
     lineHeight: 22,
     marginBottom: 4,
   },
@@ -523,27 +577,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: theme.spacing.sm,
   },
   focusDeadline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  focusActionButton: {
-    backgroundColor: theme.colors.secondary, // Neon Blue active
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
+  focusViewBtn: {
+    backgroundColor: theme.colors.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: theme.radius.sm,
+  },
+  focusViewBtnText: {
+    color: theme.colors.background,
   },
   emptyState: {
     marginTop: theme.spacing.md,
-    backgroundColor: 'rgba(26, 26, 34, 0.35)',
+    backgroundColor: 'rgba(26, 26, 34, 0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.02)',
+    borderColor: 'rgba(255,255,255,0.02)',
     borderRadius: theme.radius.lg,
   },
   sectionsList: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   notesSection: {
     marginTop: theme.spacing.lg,
@@ -563,43 +621,29 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
   },
-  notePreviewCard: {
-    width: width * 0.44,
-    height: 110,
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(26, 26, 34, 0.65)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+  notePreviewWrapper: {
+    width: width * 0.43,
   },
-  noteTitle: {
-    fontSize: 13,
-    lineHeight: 17,
+  notePreviewCard: {
+    height: 130,
+    justifyContent: 'space-between',
+    padding: theme.spacing.sm,
+    backgroundColor: 'rgba(26, 26, 34, 0.7)',
+  },
+  notePreviewHeader: {
+    marginBottom: 4,
+  },
+  notePreviewTitle: {
+    lineHeight: 16,
     marginBottom: 2,
   },
-  noteContent: {
+  notePreviewContent: {
+    flex: 1,
     fontSize: 11,
     lineHeight: 15,
-    flex: 1,
   },
-  noteCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  actionIconPurple: {
-    backgroundColor: 'rgba(124, 92, 252, 0.15)',
-  },
-  actionIconBlue: {
-    backgroundColor: 'rgba(0, 240, 255, 0.15)',
-  },
-  actionIconWhite: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  focusPriorityText: {
-    color: theme.colors.priorityHigh,
-    fontSize: 8,
-  },
-  noteDate: {
+  notePreviewDate: {
     fontSize: 9,
+    marginTop: 4,
   },
 });

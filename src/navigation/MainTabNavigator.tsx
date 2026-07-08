@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from './types';
 import { TodayScreen } from '@screens/TodayScreen';
@@ -8,102 +9,94 @@ import { QuickNotesScreen } from '@screens/QuickNotesScreen';
 import { CompletedScreen } from '@screens/CompletedScreen';
 import { SettingsScreen } from '@screens/SettingsScreen';
 import { theme } from '@theme/index';
-import { Home, Calendar, Edit3, CheckCircle2, Settings } from 'lucide-react-native';
+import { Home, CalendarDays, StickyNote, CheckCheck, SlidersHorizontal } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-interface TabBarIconProps {
+const TAB_ICONS: Record<keyof MainTabParamList, typeof Home> = {
+  Today: Home,
+  Other: CalendarDays,
+  QuickNotes: StickyNote,
+  Completed: CheckCheck,
+  Settings: SlidersHorizontal,
+};
+
+const TAB_LABELS: Record<keyof MainTabParamList, string> = {
+  Today: 'Today',
+  Other: 'Upcoming',
+  QuickNotes: 'Notes',
+  Completed: 'Done',
+  Settings: 'Settings',
+};
+
+interface AnimatedTabIconProps {
   routeName: keyof MainTabParamList;
   color: string;
   focused: boolean;
 }
 
-const TabBarIcon: React.FC<TabBarIconProps> = React.memo(({ routeName, color, focused }) => {
-  let IconComponent = Home;
-  if (routeName === 'Today') {
-    IconComponent = Home;
-  } else if (routeName === 'Other') {
-    IconComponent = Calendar;
-  } else if (routeName === 'QuickNotes') {
-    IconComponent = Edit3;
-  } else if (routeName === 'Completed') {
-    IconComponent = CheckCircle2;
-  } else if (routeName === 'Settings') {
-    IconComponent = Settings;
-  }
+const AnimatedTabIcon: React.FC<AnimatedTabIconProps> = React.memo(({ routeName, color, focused }) => {
+  const scale = useSharedValue(focused ? 1 : 0.9);
+
+  React.useEffect(() => {
+    scale.value = withSpring(focused ? 1 : 0.9, { damping: 15, stiffness: 200 });
+  }, [focused, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const IconComponent = TAB_ICONS[routeName];
 
   return (
-    <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
+    <Animated.View style={[styles.iconWrapper, animatedStyle]}>
+      {focused && <View style={styles.activeIndicator} />}
       <IconComponent
-        size={18}
+        size={22}
         color={color}
-        strokeWidth={focused ? 2.5 : 2}
+        strokeWidth={focused ? 2.5 : 1.8}
       />
-    </View>
+    </Animated.View>
   );
 });
 
-// Defined outside render to satisfy react/no-unstable-nested-components
 const getScreenOptions = ({ route }: { route: { name: keyof MainTabParamList } }) => ({
   headerShown: false,
   tabBarActiveTintColor: theme.colors.primary,
   tabBarInactiveTintColor: theme.colors.textTertiary,
+  tabBarShowLabel: true,
   tabBarStyle: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 16,
+    bottom: Platform.OS === 'ios' ? 24 : 12,
     left: 16,
     right: 16,
-    backgroundColor: 'rgba(18, 18, 24, 0.92)', // Glassy secondary surface
+    backgroundColor: 'rgba(18, 18, 24, 0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(43, 43, 53, 0.8)', // Border divider
-    borderRadius: 24,
-    height: Platform.OS === 'ios' ? 76 : 66,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 12,
-    paddingTop: 10,
-    ...theme.elevation.lg,
+    borderColor: 'rgba(43, 43, 53, 0.7)',
+    borderRadius: 26,
+    height: Platform.OS === 'ios' ? 80 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    paddingTop: 8,
+    ...theme.elevation.xl,
   } as const,
   tabBarLabelStyle: {
     fontSize: 10,
     fontWeight: '600' as const,
-    marginTop: 2,
+    marginTop: 1,
   },
   tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-    <TabBarIcon
-      routeName={route.name}
-      color={color}
-      focused={focused}
-    />
+    <AnimatedTabIcon routeName={route.name} color={color} focused={focused} />
   ),
 });
 
 export const MainTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator screenOptions={getScreenOptions}>
-      <Tab.Screen
-        name="Today"
-        component={TodayScreen}
-        options={{ title: 'Today' }}
-      />
-      <Tab.Screen
-        name="Other"
-        component={OtherScreen}
-        options={{ title: 'Upcoming' }}
-      />
-      <Tab.Screen
-        name="QuickNotes"
-        component={QuickNotesScreen}
-        options={{ title: 'Notes' }}
-      />
-      <Tab.Screen
-        name="Completed"
-        component={CompletedScreen}
-        options={{ title: 'Done' }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ title: 'Settings' }}
-      />
+      <Tab.Screen name="Today" component={TodayScreen} options={{ title: TAB_LABELS.Today }} />
+      <Tab.Screen name="Other" component={OtherScreen} options={{ title: TAB_LABELS.Other }} />
+      <Tab.Screen name="QuickNotes" component={QuickNotesScreen} options={{ title: TAB_LABELS.QuickNotes }} />
+      <Tab.Screen name="Completed" component={CompletedScreen} options={{ title: TAB_LABELS.Completed }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: TAB_LABELS.Settings }} />
     </Tab.Navigator>
   );
 };
@@ -112,13 +105,15 @@ const styles = StyleSheet.create({
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 2,
+    width: 40,
+    height: 32,
   },
-  iconWrapperActive: {
-    // Add subtle indicator shadow when focused
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+  activeIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 32,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: theme.colors.primary,
   },
 });

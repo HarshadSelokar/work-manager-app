@@ -7,86 +7,73 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@navigation/types';
-import { AppContainer, Text, Button, Divider } from '@components/common';
+import { AppContainer, Text, Button, Divider, GlassCard } from '@components/common';
 import { WorksRepository } from '../repository/works.repository';
 import { Work, WorkStatus, WorkCategory, WorkPriority } from '@models/index';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { theme } from '@theme/index';
+import {
+  ArrowLeft,
+  Save,
+  Camera,
+  Image as ImageIcon,
+  Link2,
+  Trash2,
+  X,
+  Calendar,
+} from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddWork'>;
 
 export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
   const worksRepo = useMemo(() => new WorksRepository(), []);
 
-  // Form States
   const [title, setTitle] = useState('');
   const [reference, setReference] = useState('');
   const [priority, setPriority] = useState<WorkPriority>(WorkPriority.MEDIUM);
   const [category, setCategory] = useState<WorkCategory>(WorkCategory.TODAY);
   const [description, setDescription] = useState('');
-  const [deadlineString, setDeadlineString] = useState(''); // YYYY-MM-DD
+  const [deadlineString, setDeadlineString] = useState('');
   const [links, setLinks] = useState<{ id: string; url: string; title: string }[]>([]);
   const [images, setImages] = useState<{ id: string; imagePath: string }[]>([]);
-
-  // Link Temp States
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkTitle, setNewLinkTitle] = useState('');
 
-  // Image Upload Actions
   const handleSelectImage = useCallback((source: 'camera' | 'gallery') => {
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8,
-      saveToPhotos: true,
-    };
-
+    const options = { mediaType: 'photo' as const, quality: 0.8, saveToPhotos: true };
     const callback = (response: any) => {
-      if (response.didCancel) {
-        return;
-      }
-      if (response.errorMessage) {
-        Alert.alert('Error', response.errorMessage);
-        return;
-      }
+      if (response.didCancel) return;
+      if (response.errorMessage) { Alert.alert('Error', response.errorMessage); return; }
       if (response.assets && response.assets.length > 0) {
         const asset = response.assets[0];
         if (asset.uri) {
-          const newImg = {
+          setImages(prev => [...prev, {
             id: 'img-' + Math.random().toString(36).substring(2, 9),
             imagePath: asset.uri,
-          };
-          setImages(prev => [...prev, newImg]);
+          }]);
         }
       }
     };
-
-    if (source === 'camera') {
-      launchCamera(options as any, callback);
-    } else {
-      launchImageLibrary(options as any, callback);
-    }
+    if (source === 'camera') { launchCamera(options as any, callback); }
+    else { launchImageLibrary(options as any, callback); }
   }, []);
 
   const handleRemoveImage = useCallback((id: string) => {
     setImages(prev => prev.filter(img => img.id !== id));
   }, []);
 
-  // Link Management Actions
   const handleAddLink = useCallback(() => {
-    if (!newLinkUrl.trim()) {
-      Alert.alert('Validation', 'Link URL is required.');
-      return;
-    }
+    if (!newLinkUrl.trim()) { Alert.alert('Validation', 'Link URL is required.'); return; }
     const cleanUrl = newLinkUrl.trim();
-    const newLink = {
+    setLinks(prev => [...prev, {
       id: 'link-' + Math.random().toString(36).substring(2, 9),
       url: cleanUrl,
       title: newLinkTitle.trim() || cleanUrl,
-    };
-    setLinks(prev => [...prev, newLink]);
+    }]);
     setNewLinkUrl('');
     setNewLinkTitle('');
   }, [newLinkUrl, newLinkTitle]);
@@ -95,40 +82,23 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
     setLinks(prev => prev.filter(link => link.id !== id));
   }, []);
 
-  // Save Action
   const handleSave = useCallback(() => {
-    if (!title.trim()) {
-      Alert.alert('Validation', 'Task title is required.');
+    if (!title.trim()) { Alert.alert('Validation', 'Task title is required.'); return; }
+
+    const cleanRef = reference.trim();
+    if (cleanRef && worksRepo.referenceExists(cleanRef)) {
+      Alert.alert('Duplicate Reference', `A task with reference "${cleanRef}" already exists.`);
       return;
     }
 
-    const cleanRef = reference.trim();
-    if (cleanRef) {
-      const exists = worksRepo.referenceExists(cleanRef);
-      if (exists) {
-        Alert.alert('Duplicate Reference', `A task with reference code "${cleanRef}" already exists.`);
-        return;
-      }
-    }
-
-    let parsedDeadline: Date | undefined = undefined;
+    let parsedDeadline: Date | undefined;
     if (deadlineString.trim()) {
       const parts = deadlineString.trim().split('-');
       if (parts.length === 3) {
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        const d = parseInt(parts[2], 10);
-        const dateObj = new Date(y, m, d);
-        if (!isNaN(dateObj.getTime())) {
-          parsedDeadline = dateObj;
-        } else {
-          Alert.alert('Validation', 'Deadline date is invalid. Please use YYYY-MM-DD.');
-          return;
-        }
-      } else {
-        Alert.alert('Validation', 'Deadline date format is invalid. Please use YYYY-MM-DD.');
-        return;
-      }
+        const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        if (!isNaN(dateObj.getTime())) { parsedDeadline = dateObj; }
+        else { Alert.alert('Validation', 'Deadline date is invalid. Use YYYY-MM-DD.'); return; }
+      } else { Alert.alert('Validation', 'Deadline format is invalid. Use YYYY-MM-DD.'); return; }
     }
 
     const newWorkId = 'work-' + Math.random().toString(36).substring(2, 15);
@@ -143,46 +113,42 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
       status: WorkStatus.TODO,
       createdAt: new Date(),
       updatedAt: new Date(),
-      images: images.map(img => ({
-        id: img.id,
-        workId: newWorkId,
-        imagePath: img.imagePath,
-      })),
-      links: links.map(link => ({
-        id: link.id,
-        workId: newWorkId,
-        url: link.url,
-        title: link.title || undefined,
-      })),
+      images: images.map(img => ({ id: img.id, workId: newWorkId, imagePath: img.imagePath })),
+      links: links.map(link => ({ id: link.id, workId: newWorkId, url: link.url, title: link.title || undefined })),
     };
 
     try {
       worksRepo.create(newWork);
-      Alert.alert('Success', 'Task created successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert('Success', 'Task created successfully!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (error: any) {
       Alert.alert('Save Error', error.message || 'Failed to save the task.');
     }
   }, [title, reference, priority, category, description, deadlineString, images, links, worksRepo, navigation]);
 
+  const PRIORITY_OPTIONS = [
+    { value: WorkPriority.LOW, color: theme.colors.priorityLow, bg: theme.colors.priorityLowBg, label: 'Low' },
+    { value: WorkPriority.MEDIUM, color: theme.colors.priorityMedium, bg: theme.colors.priorityMediumBg, label: 'Medium' },
+    { value: WorkPriority.HIGH, color: theme.colors.priorityHigh, bg: theme.colors.priorityHighBg, label: 'High' },
+  ];
+
   return (
     <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text variant="displaySmall" fontWeight="bold">
-            Create Routine Task
-          </Text>
-          <Text variant="bodyMedium" color="textSecondary">
-            Fill in details to catalog a new work item.
-          </Text>
-        </View>
+      {/* ─── Nav Bar ─── */}
+      <View style={styles.navBar}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <ArrowLeft size={20} color={theme.colors.textPrimary} />
+        </Pressable>
+        <Text variant="titleMedium" fontWeight="bold">New Task</Text>
+        <Pressable style={styles.saveBtn} onPress={handleSave}>
+          <Save size={16} color="#FFFFFF" />
+          <Text variant="caption" fontWeight="bold" style={styles.saveBtnText}>Save</Text>
+        </Pressable>
+      </View>
 
-        {/* Title Input */}
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* ─── Title ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Title *
-          </Text>
+          <Text variant="overline" color="textSecondary" style={styles.label}>TITLE *</Text>
           <TextInput
             style={styles.textInput}
             placeholder="What needs to be done?"
@@ -192,14 +158,12 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        {/* Reference Input */}
+        {/* ─── Reference ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Reference Code (Unique identifier)
-          </Text>
+          <Text variant="overline" color="textSecondary" style={styles.label}>REFERENCE CODE</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="e.g. REF-1002"
+            placeholder="e.g. REF-1002 (optional)"
             placeholderTextColor={theme.colors.textTertiary}
             value={reference}
             onChangeText={setReference}
@@ -207,78 +171,47 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        {/* Category Selector */}
+        {/* ─── Category Toggle ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Category Target
-          </Text>
-          <View style={styles.selectorContainer}>
+          <Text variant="overline" color="textSecondary" style={styles.label}>CATEGORY</Text>
+          <View style={styles.segmentControl}>
             <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.selectorTab,
-                category === WorkCategory.TODAY && styles.selectorTabActive,
-              ]}
+              style={[styles.segmentTab, category === WorkCategory.TODAY && styles.segmentTabActive]}
               onPress={() => setCategory(WorkCategory.TODAY)}
             >
-              <Text
-                fontWeight="semiBold"
-                style={[
-                  styles.selectorText,
-                  category === WorkCategory.TODAY && styles.selectorTextActive,
-                ]}
-              >
+              <Text variant="bodySmall" fontWeight="semiBold" style={category === WorkCategory.TODAY ? styles.segmentTextActive : styles.segmentText}>
                 Today's Routine
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.selectorTab,
-                category === WorkCategory.OTHER && styles.selectorTabActive,
-              ]}
+              style={[styles.segmentTab, category === WorkCategory.OTHER && styles.segmentTabActive]}
               onPress={() => setCategory(WorkCategory.OTHER)}
             >
-              <Text
-                fontWeight="semiBold"
-                style={[
-                  styles.selectorText,
-                  category === WorkCategory.OTHER && styles.selectorTextActive,
-                ]}
-              >
-                Upcoming Backlog
+              <Text variant="bodySmall" fontWeight="semiBold" style={category === WorkCategory.OTHER ? styles.segmentTextActive : styles.segmentText}>
+                Upcoming
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Priority Segmented Chips Selector */}
+        {/* ─── Priority ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Priority Status
-          </Text>
-          <View style={styles.priorityContainer}>
-            {[
-              { value: WorkPriority.LOW, color: theme.colors.priorityLow, bg: theme.colors.priorityLowBg, label: 'Low' },
-              { value: WorkPriority.MEDIUM, color: theme.colors.priorityMedium, bg: theme.colors.priorityMediumBg, label: 'Medium' },
-              { value: WorkPriority.HIGH, color: theme.colors.priorityHigh, bg: theme.colors.priorityHighBg, label: 'High' }
-            ].map(item => {
+          <Text variant="overline" color="textSecondary" style={styles.label}>PRIORITY</Text>
+          <View style={styles.priorityRow}>
+            {PRIORITY_OPTIONS.map(item => {
               const isSelected = priority === item.value;
               return (
                 <TouchableOpacity
                   key={item.value}
-                  activeOpacity={0.7}
                   style={[
                     styles.priorityChip,
                     { borderColor: isSelected ? item.color : theme.colors.border },
-                    isSelected && { backgroundColor: item.bg }
+                    isSelected && { backgroundColor: item.bg },
                   ]}
                   onPress={() => setPriority(item.value)}
                 >
-                  <Text
-                    fontWeight="semiBold"
-                    style={{ color: isSelected ? item.color : theme.colors.textSecondary }}
-                  >
+                  <View style={[styles.priorityDot, { backgroundColor: item.color }]} />
+                  <Text variant="bodySmall" fontWeight="semiBold" style={{ color: isSelected ? item.color : theme.colors.textSecondary }}>
                     {item.label}
                   </Text>
                 </TouchableOpacity>
@@ -287,14 +220,12 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Description Input */}
+        {/* ─── Description ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Description
-          </Text>
+          <Text variant="overline" color="textSecondary" style={styles.label}>DESCRIPTION</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Add details about this work task..."
+            placeholder="Add details about this task..."
             placeholderTextColor={theme.colors.textTertiary}
             multiline
             numberOfLines={4}
@@ -303,31 +234,29 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        {/* Deadline Input */}
+        {/* ─── Deadline ─── */}
         <View style={styles.inputGroup}>
-          <Text variant="overline" color="textSecondary" style={styles.label}>
-            Deadline (YYYY-MM-DD)
-          </Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g. 2026-07-15"
-            placeholderTextColor={theme.colors.textTertiary}
-            value={deadlineString}
-            onChangeText={setDeadlineString}
-          />
+          <Text variant="overline" color="textSecondary" style={styles.label}>DEADLINE</Text>
+          <View style={styles.deadlineRow}>
+            <Calendar size={16} color={theme.colors.textTertiary} style={styles.deadlineIcon} />
+            <TextInput
+              style={[styles.textInput, styles.deadlineInput]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={deadlineString}
+              onChangeText={setDeadlineString}
+            />
+          </View>
         </View>
 
-        <Divider style={styles.sectionDivider} />
+        <Divider style={styles.divider} />
 
-        {/* Link Management */}
-        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>
-          Links & Bookmarks
-        </Text>
-
-        <View style={styles.linkForm}>
+        {/* ─── Links ─── */}
+        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>LINKS & BOOKMARKS</Text>
+        <GlassCard style={styles.linkForm} elevation="xs">
           <TextInput
             style={[styles.textInput, styles.linkInput]}
-            placeholder="Link Title (e.g. Reference Specs)"
+            placeholder="Link label (optional)"
             placeholderTextColor={theme.colors.textTertiary}
             value={newLinkTitle}
             onChangeText={setNewLinkTitle}
@@ -341,72 +270,65 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
             autoCapitalize="none"
             keyboardType="url"
           />
-          <Button title="Add Bookmark Link" variant="secondary" onPress={handleAddLink} />
-        </View>
+          <Pressable style={styles.addLinkBtn} onPress={handleAddLink}>
+            <Link2 size={14} color={theme.colors.primary} />
+            <Text variant="bodySmall" fontWeight="semiBold" color="primary">Add Link</Text>
+          </Pressable>
+        </GlassCard>
 
         {links.length > 0 && (
-          <View style={styles.attachmentContainer}>
+          <View style={styles.linksList}>
             {links.map(l => (
-              <View key={l.id} style={styles.linkBadge}>
-                <View style={styles.linkTextWrapper}>
-                  <Text variant="bodyLarge" fontWeight="medium" numberOfLines={1}>
-                    {l.title}
-                  </Text>
-                  <Text variant="caption" color="textSecondary" numberOfLines={1}>
-                    {l.url}
-                  </Text>
+              <View key={l.id} style={styles.linkRow}>
+                <View style={styles.linkIconBox}>
+                  <Link2 size={12} color={theme.colors.primary} />
                 </View>
-                <TouchableOpacity onPress={() => handleRemoveLink(l.id)}>
-                  <Text variant="bodyMedium" fontWeight="bold" style={{ color: theme.colors.priorityHigh }}>
-                    Remove
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.linkText}>
+                  <Text variant="bodySmall" fontWeight="semiBold" numberOfLines={1}>{l.title}</Text>
+                  <Text variant="caption" color="textSecondary" numberOfLines={1}>{l.url}</Text>
+                </View>
+                <Pressable style={styles.removeBtn} onPress={() => handleRemoveLink(l.id)}>
+                  <X size={14} color={theme.colors.danger} />
+                </Pressable>
               </View>
             ))}
           </View>
         )}
 
-        <Divider style={styles.sectionDivider} />
+        <Divider style={styles.divider} />
 
-        {/* Image Attachments */}
-        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>
-          Image Attachments
-        </Text>
-
-        <View style={styles.imageSelectorRow}>
-          <Button title="📸  Use Camera" variant="secondary" onPress={() => handleSelectImage('camera')} style={{ flex: 1 }} />
-          <Button title="🖼️  Open Gallery" variant="secondary" onPress={() => handleSelectImage('gallery')} style={{ flex: 1 }} />
+        {/* ─── Images ─── */}
+        <Text variant="overline" color="textTertiary" style={styles.sectionHeader}>IMAGE ATTACHMENTS</Text>
+        <View style={styles.imagePickerRow}>
+          <Pressable style={styles.imagePickerBtn} onPress={() => handleSelectImage('camera')}>
+            <Camera size={18} color={theme.colors.primary} />
+            <Text variant="bodySmall" fontWeight="semiBold" color="primary">Camera</Text>
+          </Pressable>
+          <Pressable style={styles.imagePickerBtn} onPress={() => handleSelectImage('gallery')}>
+            <ImageIcon size={18} color={theme.colors.secondary} />
+            <Text variant="bodySmall" fontWeight="semiBold" style={styles.galleryText}>Gallery</Text>
+          </Pressable>
         </View>
 
         {images.length > 0 && (
-          <ScrollView horizontal style={styles.imageList} contentContainerStyle={styles.imageContent} showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageScrollContent}>
             {images.map(img => (
               <View key={img.id} style={styles.imageWrapper}>
                 <Image source={{ uri: img.imagePath }} style={styles.previewImage} />
-                <TouchableOpacity
-                  style={styles.deleteImageBadge}
-                  onPress={() => handleRemoveImage(img.id)}
-                >
-                  <Text variant="caption" fontWeight="bold" style={{ color: '#ffffff' }}>
-                    ✕
-                  </Text>
-                </TouchableOpacity>
+                <Pressable style={styles.removeImageBtn} onPress={() => handleRemoveImage(img.id)}>
+                  <Trash2 size={12} color="#FFFFFF" />
+                </Pressable>
               </View>
             ))}
           </ScrollView>
         )}
 
-        <Divider style={styles.sectionDivider} />
+        <Divider style={styles.divider} />
 
-        {/* Screen Bottom Actions */}
+        {/* ─── Actions ─── */}
         <View style={styles.actionRow}>
-          <Button title="Save Task" variant="primary" onPress={handleSave} style={styles.actionBtn} />
-          <Button
-            title="Cancel"
-            variant="secondary"
-            onPress={() => navigation.goBack()}
-            style={styles.actionBtn}
-          />
+          <Button title="Save Task" variant="primary" onPress={handleSave} style={styles.actionBtnFlex} />
+          <Button title="Cancel" variant="outlined" onPress={() => navigation.goBack()} style={styles.actionBtnFlex} />
         </View>
       </ScrollView>
     </AppContainer>
@@ -414,138 +336,166 @@ export const AddWorkScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.background,
+  container: { backgroundColor: theme.colors.background },
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
   },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
+  },
+  saveBtnText: { color: '#FFFFFF' },
   scrollContainer: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
   },
-  header: {
-    marginBottom: theme.spacing.lg,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.textSecondary,
-  },
+  inputGroup: { marginBottom: theme.spacing.md },
+  label: { marginBottom: 6 },
   textInput: {
     backgroundColor: theme.colors.card,
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm + 2,
     color: theme.colors.textPrimary,
     fontSize: 15,
     ...theme.elevation.xs,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  selectorContainer: {
+  textArea: { height: 100, textAlignVertical: 'top' },
+  segmentControl: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     padding: 3,
   },
-  selectorTab: {
+  segmentTab: {
     flex: 1,
-    paddingVertical: theme.spacing.sm - 2,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.sm,
   },
-  selectorTabActive: {
+  segmentTabActive: {
     backgroundColor: theme.colors.card,
     ...theme.elevation.xs,
   },
-  selectorText: {
-    color: theme.colors.textSecondary,
-  },
-  selectorTextActive: {
-    color: theme.colors.primary,
-  },
-  priorityContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
+  segmentText: { color: theme.colors.textSecondary },
+  segmentTextActive: { color: theme.colors.primary },
+  priorityRow: { flexDirection: 'row', gap: theme.spacing.sm },
   priorityChip: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
+    gap: 6,
+    paddingVertical: 10,
     borderRadius: theme.radius.md,
     borderWidth: 2,
     backgroundColor: theme.colors.card,
     ...theme.elevation.xs,
   },
-  sectionDivider: {
-    marginVertical: theme.spacing.lg,
-  },
-  sectionHeader: {
-    marginBottom: theme.spacing.sm,
-  },
-  linkForm: {
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.elevation.xs,
-  },
-  linkInput: {
-    marginBottom: theme.spacing.sm,
-  },
-  attachmentContainer: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.elevation.xs,
-  },
-  linkBadge: {
+  priorityDot: { width: 6, height: 6, borderRadius: 3 },
+  deadlineRow: { flexDirection: 'row', alignItems: 'center' },
+  deadlineIcon: { position: 'absolute', left: 14, zIndex: 1 },
+  deadlineInput: { flex: 1, paddingLeft: 40 },
+  divider: { marginVertical: theme.spacing.lg },
+  sectionHeader: { marginBottom: theme.spacing.sm },
+  linkForm: { padding: theme.spacing.md, marginBottom: theme.spacing.sm },
+  linkInput: { marginBottom: theme.spacing.sm },
+  addLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
-  linkTextWrapper: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
+  linksList: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
   },
-  imageSelectorRow: {
+  linkRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
   },
-  imageList: {
-    marginVertical: theme.spacing.sm,
+  linkIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  imageContent: {
-    gap: theme.spacing.sm,
+  linkText: { flex: 1 },
+  removeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  imageWrapper: {
-    position: 'relative',
+  imagePickerRow: { flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.md },
+  imagePickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.elevation.xs,
   },
+  galleryText: { color: theme.colors.secondary },
+  imageScrollContent: { gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
+  imageWrapper: { position: 'relative' },
   previewImage: {
     width: 90,
     height: 90,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.border,
   },
-  deleteImageBadge: {
+  removeImageBtn: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: -6,
+    right: -6,
     backgroundColor: theme.colors.danger,
     width: 22,
     height: 22,
@@ -553,11 +503,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  actionBtn: {
-    flex: 1,
-  },
+  actionRow: { flexDirection: 'row', gap: theme.spacing.md },
+  actionBtnFlex: { flex: 1 },
 });

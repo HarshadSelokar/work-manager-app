@@ -1,14 +1,28 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AppContainer, Text, Divider } from '@components/common';
+import { AppContainer, Text, Divider, GlassCard, GradientBackground, ProgressRing, StatisticCard } from '@components/common';
 import { WorksRepository } from '../repository/works.repository';
 import { theme } from '@theme/index';
+import {
+  Database,
+  Download,
+  Upload,
+  Palette,
+  AlertTriangle,
+  ChevronRight,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  TrendingUp,
+  Layers,
+  StickyNote,
+  Info,
+  Code2,
+} from 'lucide-react-native';
 
 export const SettingsScreen: React.FC = () => {
   const worksRepo = useMemo(() => new WorksRepository(), []);
-  
-  // Dashboard Statistics State
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -23,32 +37,28 @@ export const SettingsScreen: React.FC = () => {
       const data = worksRepo.getStatistics();
       setStats(data);
     } catch (error) {
-      console.error('Failed to load dashboard statistics:', error);
+      console.error('Failed to load statistics:', error);
     }
   }, [worksRepo]);
 
-  // Refresh statistics when screen is focused
   useFocusEffect(
-    useCallback(() => {
-      loadStatistics();
-    }, [loadStatistics])
+    useCallback(() => { loadStatistics(); }, [loadStatistics])
   );
 
-  // Actions
   const handleResetDatabase = useCallback(() => {
     Alert.alert(
-      'Reset Database Warning',
-      'Are you sure you want to permanently clear all tasks, notes, links, and images? This action is destructive and cannot be undone.',
+      'Reset Database',
+      'This will permanently delete all tasks, notes, links, and images. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset All',
+          text: 'Reset All Data',
           style: 'destructive',
           onPress: () => {
             try {
               worksRepo.resetDatabase();
               loadStatistics();
-              Alert.alert('Reset Success', 'The database has been cleared completely.');
+              Alert.alert('Done', 'Database cleared successfully.');
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to reset database.');
             }
@@ -61,26 +71,19 @@ export const SettingsScreen: React.FC = () => {
 
   const handleExportDatabase = useCallback(() => {
     try {
-      const backupData = {
-        exportedAt: new Date().toISOString(),
-        version: '1.0.0',
-        stats,
-      };
-      Alert.alert(
-        'Database Exported',
-        `Database backup JSON package created successfully:\n\n${JSON.stringify(backupData, null, 2)}`
-      );
+      const backupData = { exportedAt: new Date().toISOString(), version: '1.0.0', stats };
+      Alert.alert('Export Preview', JSON.stringify(backupData, null, 2).substring(0, 500) + '...');
     } catch {
-      Alert.alert('Export Failed', 'An error occurred during database export.');
+      Alert.alert('Export Failed', 'An error occurred during export.');
     }
   }, [stats]);
 
   const handleImportDatabase = useCallback(() => {
-    Alert.alert('Import Database', 'Importing database backups from JSON package is placeholder.');
+    Alert.alert('Import Database', 'Database import from JSON backup is a placeholder feature.');
   }, []);
 
   const handleToggleTheme = useCallback(() => {
-    Alert.alert('Theme Settings', 'Dynamic light/dark theme preference is configured as dark-ready placeholder.');
+    Alert.alert('Theme Settings', 'Dynamic theme configuration is a placeholder. Dark mode is default.');
   }, []);
 
   const completionRate = useMemo(() => {
@@ -88,247 +91,217 @@ export const SettingsScreen: React.FC = () => {
     return Math.round((stats.completed / stats.total) * 100);
   }, [stats]);
 
+  const SETTINGS_ROWS = [
+    { icon: <Download size={18} color={theme.colors.primary} />, label: 'Export Database Backup', bg: theme.colors.primaryLight, onPress: handleExportDatabase },
+    { icon: <Upload size={18} color={theme.colors.secondary} />, label: 'Import Database Backup', bg: 'rgba(0, 240, 255, 0.1)', onPress: handleImportDatabase },
+    { icon: <Palette size={18} color={theme.colors.warning} />, label: 'Customize Appearance', bg: 'rgba(245, 158, 11, 0.1)', onPress: handleToggleTheme },
+  ];
+
   return (
     <AppContainer safeAreaSides={['top', 'left', 'right']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <GradientBackground>
+        {/* ─── Header ─── */}
         <View style={styles.header}>
-          <Text variant="displaySmall" fontWeight="bold">
-            More Options
-          </Text>
-          <Text variant="bodyMedium" color="textSecondary">
-            Review stats dashboard, manage data exports, and configure preferences.
-          </Text>
-        </View>
-
-        {/* Task Completion Rate Dashboard Card */}
-        <View style={styles.dashboardCard}>
-          <View style={styles.progressHeader}>
-            <Text variant="titleMedium" fontWeight="bold">
-              Task Completion Rate
-            </Text>
-            <Text variant="titleLarge" fontWeight="bold" color="success">
-              {completionRate}%
-            </Text>
-          </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${completionRate}%` }]} />
-          </View>
-          <Text variant="caption" color="textSecondary" style={styles.progressCaption}>
-            {stats.completed} of {stats.total} total routine items marked as completed.
-          </Text>
-        </View>
-
-        {/* Statistics Grid */}
-        <Text variant="overline" style={styles.sectionTitle}>
-          STATISTICS DASHBOARD
-        </Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="primary">
-              {stats.total}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              Total Tasks
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="success">
-              {stats.completed}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              Completed
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="warning">
-              {stats.pending}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              Pending
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="danger">
-              {stats.highPriority}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              High Priority
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="info">
-              {stats.todayCount}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              Today's Routine
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text variant="titleLarge" fontWeight="bold" color="primary">
-              {stats.notesCount}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              Quick Notes
-            </Text>
+          <View style={styles.headerIconRow}>
+            <View style={styles.headerIcon}>
+              <Database size={20} color={theme.colors.primary} />
+            </View>
+            <View>
+              <Text variant="displaySmall" fontWeight="bold">Settings</Text>
+              <Text variant="bodySmall" color="textSecondary">Stats, data, and preferences</Text>
+            </View>
           </View>
         </View>
 
-        <Divider style={styles.sectionDivider} />
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {/* ─── Completion Rate Hero Card ─── */}
+          <GlassCard style={styles.heroCard} elevation="md">
+            <View style={styles.heroContent}>
+              <ProgressRing progress={completionRate / 100} size={72} strokeWidth={7} showPercent />
+              <View style={styles.heroText}>
+                <Text variant="titleMedium" fontWeight="bold">Task Completion</Text>
+                <Text variant="bodySmall" color="textSecondary" style={styles.heroSub}>
+                  {stats.completed} of {stats.total} tasks completed
+                </Text>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
+                </View>
+              </View>
+            </View>
+          </GlassCard>
 
-        {/* Settings Control Block */}
-        <Text variant="overline" style={styles.sectionTitle}>
-          PREFERENCES & DATA CONTROL
-        </Text>
-        <View style={styles.optionsBlock}>
-          <TouchableOpacity style={styles.optionRow} onPress={handleExportDatabase}>
-            <Text variant="bodyMedium" fontWeight="semiBold">
-              📤  Export Database JSON Backup
-            </Text>
-            <Text variant="bodyLarge" color="textTertiary">
-              ›
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionRow} onPress={handleImportDatabase}>
-            <Text variant="bodyMedium" fontWeight="semiBold">
-              📥  Import Database JSON Backup
-            </Text>
-            <Text variant="bodyLarge" color="textTertiary">
-              ›
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionRow} onPress={handleToggleTheme}>
-            <Text variant="bodyMedium" fontWeight="semiBold">
-              🎨  Customize Appearance Theme
-            </Text>
-            <Text variant="bodyLarge" color="textTertiary">
-              ›
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.optionRow, styles.lastOptionRow]} onPress={handleResetDatabase}>
-            <Text variant="bodyMedium" fontWeight="semiBold" style={{ color: theme.colors.priorityHigh }}>
-              🗑️  Reset Application Database
-            </Text>
-            <Text variant="bodyLarge" color="textTertiary">
-              ›
-            </Text>
-          </TouchableOpacity>
-        </View>
+          {/* ─── Statistics Grid ─── */}
+          <Text variant="overline" color="textTertiary" style={styles.sectionTitle}>STATISTICS</Text>
+          <View style={styles.statsGrid}>
+            <StatisticCard label="Total" value={stats.total} icon={<Layers size={16} color={theme.colors.primary} />} color={theme.colors.primary} />
+            <StatisticCard label="Completed" value={stats.completed} icon={<CheckCircle2 size={16} color={theme.colors.success} />} color={theme.colors.success} />
+          </View>
+          <View style={[styles.statsGrid, styles.statsGridBottom]}>
+            <StatisticCard label="Pending" value={stats.pending} icon={<Clock size={16} color={theme.colors.warning} />} color={theme.colors.warning} />
+            <StatisticCard label="High Priority" value={stats.highPriority} icon={<TrendingUp size={16} color={theme.colors.danger} />} color={theme.colors.danger} />
+          </View>
+          <View style={[styles.statsGrid, styles.statsGridBottom]}>
+            <StatisticCard label="Today's Tasks" value={stats.todayCount} icon={<AlertCircle size={16} color={theme.colors.info} />} color={theme.colors.info} />
+            <StatisticCard label="Quick Notes" value={stats.notesCount} icon={<StickyNote size={16} color={theme.colors.primary} />} color={theme.colors.primary} />
+          </View>
 
-        <Divider style={styles.sectionDivider} />
+          <Divider style={styles.divider} />
 
-        {/* About App Info */}
-        <Text variant="overline" style={styles.sectionTitle}>
-          ABOUT APPLICATION
-        </Text>
-        <View style={styles.aboutBlock}>
-          <Text variant="titleMedium" fontWeight="bold">
-            Routine Work Manager
-          </Text>
-          <Text variant="caption" color="textSecondary">
-            Version 1.0.0 (Strict Offline-First SQLite Client)
-          </Text>
-          <Text variant="bodySmall" color="textTertiary" style={styles.aboutDesc}>
-            Built using React Native CLI, JSI SQLite Driver, and SOLID repository principles for software engineering interview preparation.
-          </Text>
-        </View>
-      </ScrollView>
+          {/* ─── Preferences ─── */}
+          <Text variant="overline" color="textTertiary" style={styles.sectionTitle}>DATA & PREFERENCES</Text>
+          <GlassCard style={styles.optionsCard} elevation="sm">
+            {SETTINGS_ROWS.map((row, i) => (
+              <Pressable
+                key={i}
+                style={[styles.settingsRow, i < SETTINGS_ROWS.length - 1 && styles.settingsRowBorder]}
+                onPress={row.onPress}
+                android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
+              >
+                <View style={[styles.rowIconBox, { backgroundColor: row.bg }]}>
+                  {row.icon}
+                </View>
+                <Text variant="bodyMedium" fontWeight="semiBold" style={styles.rowLabel}>
+                  {row.label}
+                </Text>
+                <ChevronRight size={16} color={theme.colors.textTertiary} />
+              </Pressable>
+            ))}
+          </GlassCard>
+
+          <Divider style={styles.divider} />
+
+          {/* ─── Danger Zone ─── */}
+          <Text variant="overline" style={styles.dangerSectionTitle}>DANGER ZONE</Text>
+          <GlassCard style={styles.dangerCard} elevation="sm">
+            <Pressable style={styles.settingsRow} onPress={handleResetDatabase}>
+              <View style={styles.dangerIconBox}>
+                <AlertTriangle size={18} color={theme.colors.danger} />
+              </View>
+              <View style={styles.dangerTextBlock}>
+                <Text variant="bodyMedium" fontWeight="bold" style={styles.dangerLabel}>Reset Application Data</Text>
+                <Text variant="caption" color="textSecondary">Permanently deletes all tasks, notes, and attachments.</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.danger} />
+            </Pressable>
+          </GlassCard>
+
+          <Divider style={styles.divider} />
+
+          {/* ─── About ─── */}
+          <Text variant="overline" color="textTertiary" style={styles.sectionTitle}>ABOUT</Text>
+          <GlassCard style={styles.aboutCard} elevation="xs">
+            <View style={styles.aboutRow}>
+              <View style={styles.aboutIcon}>
+                <Info size={18} color={theme.colors.secondary} />
+              </View>
+              <View>
+                <Text variant="titleMedium" fontWeight="bold">Work Manager</Text>
+                <Text variant="caption" color="textSecondary">Version 1.0.0 · Offline-First SQLite</Text>
+              </View>
+            </View>
+            <View style={styles.aboutRow}>
+              <View style={styles.aboutIcon}>
+                <Code2 size={18} color={theme.colors.primary} />
+              </View>
+              <Text variant="bodySmall" color="textSecondary" style={styles.aboutDesc}>
+                Built with React Native CLI · JSI SQLite Driver · SOLID repository pattern · Clean Architecture
+              </Text>
+            </View>
+          </GlassCard>
+        </ScrollView>
+      </GradientBackground>
     </AppContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.background,
+  container: { backgroundColor: theme.colors.background },
+  header: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  headerIconRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContainer: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xxl,
   },
-  header: {
-    marginBottom: theme.spacing.md,
-  },
-  dashboardCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
+  heroCard: {
     marginBottom: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.elevation.sm,
+    padding: theme.spacing.md,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  progressBarBg: {
-    height: 8,
+  heroContent: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
+  heroText: { flex: 1, gap: 4 },
+  heroSub: { lineHeight: 16 },
+  progressTrack: {
+    height: 4,
     backgroundColor: theme.colors.divider,
-    borderRadius: theme.radius.round,
+    borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: theme.spacing.xs,
+    marginTop: 6,
   },
-  progressBarFill: {
+  progressFill: {
     height: '100%',
     backgroundColor: theme.colors.success,
-    borderRadius: theme.radius.round,
+    borderRadius: 2,
   },
-  progressCaption: {
-    marginTop: theme.spacing.xs,
-  },
-  sectionTitle: {
-    marginBottom: theme.spacing.sm,
-    color: theme.colors.textTertiary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  statsCard: {
-    width: '47%',
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    ...theme.elevation.sm,
-  },
-  sectionDivider: {
-    marginVertical: theme.spacing.lg,
-  },
-  optionsBlock: {
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    overflow: 'hidden',
-  },
-  optionRow: {
+  sectionTitle: { marginBottom: theme.spacing.sm },
+  statsGrid: { flexDirection: 'row', gap: theme.spacing.sm },
+  statsGridBottom: { marginTop: theme.spacing.sm, marginBottom: 0 },
+  divider: { marginVertical: theme.spacing.lg },
+  optionsCard: { overflow: 'hidden', padding: 0 },
+  settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  settingsRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
-  lastOptionRow: {
-    borderBottomWidth: 0,
+  rowIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  aboutBlock: {
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    gap: 4,
-    ...theme.elevation.xs,
+  rowLabel: { flex: 1 },
+  dangerSectionTitle: { marginBottom: theme.spacing.sm, color: theme.colors.danger },
+  dangerCard: {
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    padding: 0,
+    overflow: 'hidden',
   },
-  aboutDesc: {
-    lineHeight: 18,
-    marginTop: theme.spacing.xs,
+  dangerIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  dangerTextBlock: { flex: 1 },
+  dangerLabel: { color: theme.colors.danger },
+  aboutCard: { padding: theme.spacing.md, gap: theme.spacing.md },
+  aboutRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.sm },
+  aboutIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutDesc: { flex: 1, lineHeight: 18 },
 });
